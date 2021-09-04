@@ -895,7 +895,7 @@ static int cmd_hifiberry(int argc, const cmd_args *argv)
         ret = cmd_hifiberry_dtmf(argc, argv);
     }
     else if (!strncmp(argv[1].str, "testfunc", strlen("testfunc"))) {
-        ret = cmd_testfunc();   
+        ret = cmd_testfunc(0, NULL);   
     }
     else {
         printf("Syntax error.\n");
