@@ -3,11 +3,7 @@
 #include <app.h>
 #include <debug.h>
 
-#if WITH_LIB_CONSOLE
 #include <lib/console.h>
-#else
-#error "testfunc app needs a console"
-#endif
 
 
 /*******************************************************************************
