@@ -37,8 +37,6 @@
 
 #include <math.h>
 
-#include <testfunc.h>
-
 #define LOCAL_TRACE 5
 
 #define APP_SAI5_BUSID 5
@@ -893,9 +891,6 @@ static int cmd_hifiberry(int argc, const cmd_args *argv)
     }
     else if (!strncmp(argv[1].str, "dtmf", strlen("dtmf"))) {
         ret = cmd_hifiberry_dtmf(argc, argv);
-    }
-    else if (!strncmp(argv[1].str, "testfunc", strlen("testfunc"))) {
-        ret = cmd_testfunc(0, NULL);   
     }
     else {
         printf("Syntax error.\n");

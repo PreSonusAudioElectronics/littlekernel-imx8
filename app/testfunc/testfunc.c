@@ -7,6 +7,8 @@
 
 #include "testfunc.h"
 
+extern void checkFoobinate(void);
+
 /*******************************************************************************
  * Variables
  ******************************************************************************/
@@ -18,6 +20,8 @@ int cmd_testfunc(int argc, const cmd_args *argv)
 {
     printf("\nThis is the testfunc!\n");
     printf("We hope you like it!\n\n");
+
+    checkFoobinate();
 
     return 0;
 }
