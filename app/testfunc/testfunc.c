@@ -19,7 +19,8 @@ STATIC_COMMAND_END(testfunc);
 int cmd_testfunc(int argc, const cmd_args *argv)
 {
     printf("\nThis is the testfunc!\n");
-    printf("We hope you like it!\n\n");
+    printf("We hope you like it!\n");
+    printf("Now we'll call some C++\n");
 
     checkFoobinate();
 

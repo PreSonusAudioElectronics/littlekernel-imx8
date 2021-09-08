@@ -6,7 +6,7 @@ class Foobar
 public:
     void foobinate()
     {
-        printf("This is the foobinator\n");
+        printf("This is the C++ foobinator\n");
         printf("The meaning is: %1.2f\n", _theMeaning);
     }
 
