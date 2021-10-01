@@ -2,6 +2,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 TARGET := imx8mn/dts
 
+include ../../lib/pep/lkbuild.mk
+
 MODULES += \
 	app/i2c \
 	app/gpt \
