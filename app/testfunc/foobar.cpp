@@ -1,17 +1,22 @@
 
 #include <stdio.h>
+#include <stdarg.h>
+#include <util/utils.h>
+
+using namespace Pep::Util;
 
 class Foobar
 {
 public:
-    void foobinate()
-    {
-        printf("This is the C++ foobinator\n");
-        printf("The meaning is: %1.2f\n", _theMeaning);
-    }
+	void foobinate()
+	{
+		PRINTF("This is the C++ foobinator\n");
+		PRINTF("\n How about this?  Is this working?\n");
+		PRINTF("The meaning is: %1.2f\n", _theMeaning);
+	}
 
 private:
-    float _theMeaning = 42;
+	float _theMeaning = 42;
 };
 
 Foobar foob1;
@@ -21,7 +26,7 @@ extern "C"{
 
 void checkFoobinate(void)
 {
-    foob1.foobinate();
+	foob1.foobinate();
 }
 
 }
