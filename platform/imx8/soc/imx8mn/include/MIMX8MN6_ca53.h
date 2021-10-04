@@ -37840,7 +37840,7 @@ typedef struct
 /** Interrupt vectors for the MU peripheral type */
 #define MU_IRQS    \
     {              \
-        MU_M7_IRQn \
+        MU_A53_IRQn \
     }
 /* Backward compatibility */
 #define MU_SR_PM_MASK MU_SR_APM_MASK

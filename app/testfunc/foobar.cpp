@@ -10,9 +10,9 @@ class Foobar
 public:
 	void foobinate()
 	{
-		PRINTF("This is the C++ foobinator\n");
-		PRINTF("\n How about this?  Is this working?\n");
-		PRINTF("The meaning is: %1.2f\n", _theMeaning);
+		LKPRINTF("This is the C++ foobinator\n");
+		LKPRINTF("\n How about this?  Is this working?\n");
+		LKPRINTF("The meaning is: %1.2f\n", _theMeaning);
 	}
 
 private:
