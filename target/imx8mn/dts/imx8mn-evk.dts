@@ -26,7 +26,7 @@
     };
 
     aliases {
-        console = &uart4;
+        console = &uart3;
     };
 
     meminfo {
@@ -230,13 +230,13 @@
     >;
 };
 
-&uart4 {
+&uart3 {
     status = "ok";
 
     pinctrl-names = "default";
     pinctrl-0 = <
-        IOMUXC_UART4_TXD_UART4_TX 0 0x16
-        IOMUXC_UART4_RXD_UART4_RX 0 0x16
+        IOMUXC_UART3_TXD_UART3_TX 0 0x16
+        IOMUXC_UART3_RXD_UART3_RX 0 0x16
     >;
 };
 
@@ -281,4 +281,8 @@
         status = "ok";
         /* TODO: Add GPIO definition */
     };
+};
+
+&msgunit1 {
+    status = "ok";
 };
