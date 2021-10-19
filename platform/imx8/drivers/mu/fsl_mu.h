@@ -491,19 +491,19 @@ static inline void MU_DisableInterrupts(MU_Type *base, uint32_t mask)
 status_t MU_TriggerInterrupts(MU_Type *base, uint32_t mask);
 
 
-#if !(defined(FSL_FEATURE_MU_NO_NMI) && FSL_FEATURE_MU_NO_NMI)
-/*!
- * @brief Clear non-maskable interrupt (NMI) sent by the other core.
- *
- * This function clears non-maskable interrupt (NMI) sent by the other core.
- *
- * @param base MU peripheral base address.
- */
-static inline void MU_ClearNmi(MU_Type *base)
-{
-    base->SR = MU_SR_NMIC_MASK;
-}
-#endif /* FSL_FEATURE_MU_NO_NMI */
+// #if (defined(FSL_FEATURE_MU_NO_NMI) && FSL_FEATURE_MU_NO_NMI)
+// /*!
+//  * @brief Clear non-maskable interrupt (NMI) sent by the other core.
+//  *
+//  * This function clears non-maskable interrupt (NMI) sent by the other core.
+//  *
+//  * @param base MU peripheral base address.
+//  */
+// static inline void MU_ClearNmi(MU_Type *base)
+// {
+//     base->SR = MU_SR_NMIC_MASK;
+// }
+// #endif /* FSL_FEATURE_MU_NO_NMI */
 
 
 /* @} */
@@ -514,18 +514,18 @@ static inline void MU_ClearNmi(MU_Type *base)
  */
 
 
-#if !(defined(FSL_FEATURE_MU_NO_RSTH) && FSL_FEATURE_MU_NO_RSTH)
-/*!
- * @brief Boots the core at B side.
- *
- * This function sets the B side core's boot configuration and releases the
- * core from reset.
- *
- * @param base MU peripheral base address.
- * @param mode Core B boot mode.
- * @note Only MU side A can use this function.
- */
-void MU_BootCoreB(MU_Type *base, mu_core_boot_mode_t mode);
+// #if !(defined(FSL_FEATURE_MU_NO_RSTH) && FSL_FEATURE_MU_NO_RSTH)
+// /*!
+//  * @brief Boots the core at B side.
+//  *
+//  * This function sets the B side core's boot configuration and releases the
+//  * core from reset.
+//  *
+//  * @param base MU peripheral base address.
+//  * @param mode Core B boot mode.
+//  * @note Only MU side A can use this function.
+//  */
+// void MU_BootCoreB(MU_Type *base, mu_core_boot_mode_t mode);
 
 /*!
  * @brief Holds the core reset of B side.
@@ -535,16 +535,16 @@ void MU_BootCoreB(MU_Type *base, mu_core_boot_mode_t mode);
  * @param base MU peripheral base address.
  * @note Only A side could call this function.
  */
-static inline void MU_HoldCoreBReset(MU_Type *base)
-{
-#if (defined(FSL_FEATURE_MU_HAS_CCR) && FSL_FEATURE_MU_HAS_CCR)
-    base->CCR |= MU_CCR_RSTH_MASK;
-#else  /* FSL_FEATURE_MU_HAS_CCR */
-    uint32_t reg = base->CR;
-    reg          = (reg & ~(MU_CR_GIRn_MASK | MU_CR_NMI_MASK)) | MU_CR_RSTH_MASK;
-    base->CR     = reg;
-#endif /* FSL_FEATURE_MU_HAS_CCR */
-}
+// static inline void MU_HoldCoreBReset(MU_Type *base)
+// {
+// #if (defined(FSL_FEATURE_MU_HAS_CCR) && FSL_FEATURE_MU_HAS_CCR)
+//     base->CCR |= MU_CCR_RSTH_MASK;
+// #else  /* FSL_FEATURE_MU_HAS_CCR */
+//     uint32_t reg = base->CR;
+//     reg          = (reg & ~(MU_CR_GIRn_MASK | MU_CR_NMI_MASK)) | MU_CR_RSTH_MASK;
+//     base->CR     = reg;
+// #endif /* FSL_FEATURE_MU_HAS_CCR */
+// }
 
 /*!
  * @brief Boots the other core.
@@ -554,7 +554,7 @@ static inline void MU_HoldCoreBReset(MU_Type *base)
  * @param base MU peripheral base address.
  * @param mode The other core boot mode.
  */
-void MU_BootOtherCore(MU_Type *base, mu_core_boot_mode_t mode);
+// void MU_BootOtherCore(MU_Type *base, mu_core_boot_mode_t mode);
 
 /*!
  * @brief Holds the other core reset.
@@ -563,42 +563,42 @@ void MU_BootOtherCore(MU_Type *base, mu_core_boot_mode_t mode);
  *
  * @param base MU peripheral base address.
  */
-static inline void MU_HoldOtherCoreReset(MU_Type *base)
-{
-    /*
-     * MU_HoldOtherCoreReset and MU_HoldCoreBReset are the same, MU_HoldCoreBReset
-     * is kept for compatible with older platforms.
-     */
-    MU_HoldCoreBReset(base);
-}
-#endif /* FSL_FEATURE_MU_NO_RSTH */
+// static inline void MU_HoldOtherCoreReset(MU_Type *base)
+// {
+//     /*
+//      * MU_HoldOtherCoreReset and MU_HoldCoreBReset are the same, MU_HoldCoreBReset
+//      * is kept for compatible with older platforms.
+//      */
+//     MU_HoldCoreBReset(base);
+// }
+// #endif /* FSL_FEATURE_MU_NO_RSTH */
 
-#if !(defined(FSL_FEATURE_MU_NO_MUR) && FSL_FEATURE_MU_NO_MUR)
-/*!
- * @brief Resets the MU for both A side and B side.
- *
- * This function resets the MU for both A side and B side. Before reset, it is
- * recommended to interrupt processor B, because this function may affect the
- * ongoing processor B programs.
- *
- * @param base MU peripheral base address.
- * @note For some platforms, only MU side A could use this function, check
- * reference manual for details.
- */
-static inline void MU_ResetBothSides(MU_Type *base)
-{
-    uint32_t reg = base->CR;
-    reg          = (reg & ~(MU_CR_GIRn_MASK | MU_CR_NMI_MASK)) | MU_CR_MUR_MASK;
-    base->CR     = reg;
+// #if !(defined(FSL_FEATURE_MU_NO_MUR) && FSL_FEATURE_MU_NO_MUR)
+// /*!
+//  * @brief Resets the MU for both A side and B side.
+//  *
+//  * This function resets the MU for both A side and B side. Before reset, it is
+//  * recommended to interrupt processor B, because this function may affect the
+//  * ongoing processor B programs.
+//  *
+//  * @param base MU peripheral base address.
+//  * @note For some platforms, only MU side A could use this function, check
+//  * reference manual for details.
+//  */
+// static inline void MU_ResetBothSides(MU_Type *base)
+// {
+//     uint32_t reg = base->CR;
+//     reg          = (reg & ~(MU_CR_GIRn_MASK | MU_CR_NMI_MASK)) | MU_CR_MUR_MASK;
+//     base->CR     = reg;
 
-#if (defined(FSL_FEATURE_MU_HAS_SR_RS) && FSL_FEATURE_MU_HAS_SR_RS)
-    /* Wait for the other side out of reset. */
-    while (0U != (base->SR & MU_SR_RS_MASK))
-    {
-    }
-#endif /* FSL_FEATURE_MU_HAS_SR_RS */
-}
-#endif /* FSL_FEATURE_MU_NO_MUR  */
+// #if (defined(FSL_FEATURE_MU_HAS_SR_RS) && FSL_FEATURE_MU_HAS_SR_RS)
+//     /* Wait for the other side out of reset. */
+//     while (0U != (base->SR & MU_SR_RS_MASK))
+//     {
+//     }
+// #endif /* FSL_FEATURE_MU_HAS_SR_RS */
+// }
+// #endif /* FSL_FEATURE_MU_NO_MUR  */
 
 #if (defined(FSL_FEATURE_MU_HAS_HRM) && FSL_FEATURE_MU_HAS_HRM)
 /*!
@@ -634,89 +634,89 @@ static inline void MU_MaskHardwareReset(MU_Type *base, bool mask)
 }
 #endif /* FSL_FEATURE_MU_HAS_HRM */
 
-#if !(defined(FSL_FEATURE_MU_NO_HR) && FSL_FEATURE_MU_NO_HR)
-/*!
- * @brief Hardware reset the other core.
- *
- * This function resets the other core, the other core could mask the
- * hardware reset by calling MU_MaskHardwareReset. The hardware reset
- * mask feature is only available for some platforms.
- * This function could be used together with MU_BootOtherCore to control the
- * other core reset workflow.
- *
- * Example 1: Reset the other core, and no hold reset
- * @code
- * MU_HardwareResetOtherCore(MU_A, true, false, bootMode);
- * @endcode
- * In this example, the core at MU side B will reset with the specified boot mode.
- *
- * Example 2: Reset the other core and hold it, then boot the other core later.
- * @code
- *  Here the other core enters reset, and the reset is hold
- * MU_HardwareResetOtherCore(MU_A, true, true, modeDontCare);
- *  Current core boot the other core when necessary.
- * MU_BootOtherCore(MU_A, bootMode);
- * @endcode
- *
- * @param base MU peripheral base address.
- * @param waitReset Wait the other core enters reset.
- *                    - true: Wait until the other core enters reset, if the other
- *                      core has masked the hardware reset, then this function will
- *                      be blocked.
- *                    - false: Don't wait the reset.
- * @param holdReset Hold the other core reset or not.
- *                    - true: Hold the other core in reset, this function returns
- *                      directly when the other core enters reset.
- *                    - false: Don't hold the other core in reset, this function
- *                      waits until the other core out of reset.
- * @param bootMode Boot mode of the other core, if @p holdReset is true, this
- *                 parameter is useless.
- */
-void MU_HardwareResetOtherCore(MU_Type *base, bool waitReset, bool holdReset, mu_core_boot_mode_t bootMode);
-#endif /* FSL_FEATURE_MU_NO_HR */
+// #if !(defined(FSL_FEATURE_MU_NO_HR) && FSL_FEATURE_MU_NO_HR)
+// /*!
+//  * @brief Hardware reset the other core.
+//  *
+//  * This function resets the other core, the other core could mask the
+//  * hardware reset by calling MU_MaskHardwareReset. The hardware reset
+//  * mask feature is only available for some platforms.
+//  * This function could be used together with MU_BootOtherCore to control the
+//  * other core reset workflow.
+//  *
+//  * Example 1: Reset the other core, and no hold reset
+//  * @code
+//  * MU_HardwareResetOtherCore(MU_A, true, false, bootMode);
+//  * @endcode
+//  * In this example, the core at MU side B will reset with the specified boot mode.
+//  *
+//  * Example 2: Reset the other core and hold it, then boot the other core later.
+//  * @code
+//  *  Here the other core enters reset, and the reset is hold
+//  * MU_HardwareResetOtherCore(MU_A, true, true, modeDontCare);
+//  *  Current core boot the other core when necessary.
+//  * MU_BootOtherCore(MU_A, bootMode);
+//  * @endcode
+//  *
+//  * @param base MU peripheral base address.
+//  * @param waitReset Wait the other core enters reset.
+//  *                    - true: Wait until the other core enters reset, if the other
+//  *                      core has masked the hardware reset, then this function will
+//  *                      be blocked.
+//  *                    - false: Don't wait the reset.
+//  * @param holdReset Hold the other core reset or not.
+//  *                    - true: Hold the other core in reset, this function returns
+//  *                      directly when the other core enters reset.
+//  *                    - false: Don't hold the other core in reset, this function
+//  *                      waits until the other core out of reset.
+//  * @param bootMode Boot mode of the other core, if @p holdReset is true, this
+//  *                 parameter is useless.
+//  */
+// void MU_HardwareResetOtherCore(MU_Type *base, bool waitReset, bool holdReset, mu_core_boot_mode_t bootMode);
+// #endif /* FSL_FEATURE_MU_NO_HR */
 
-#if !(defined(FSL_FEATURE_MU_NO_CLKE) && FSL_FEATURE_MU_NO_CLKE)
-/*!
- * @brief Enables or disables the clock on the other core.
- *
- * This function enables or disables the platform clock on the other core when
- * that core enters a stop mode. If disabled, the platform clock for the other
- * core is disabled when it enters stop mode. If enabled, the platform clock
- * keeps running on the other core in stop mode, until this core also enters
- * stop mode.
- *
- * @param base MU peripheral base address.
- * @param enable   Enable or disable the clock on the other core.
- */
-static inline void MU_SetClockOnOtherCoreEnable(MU_Type *base, bool enable)
-{
-#if (defined(FSL_FEATURE_MU_HAS_CCR) && FSL_FEATURE_MU_HAS_CCR)
-    if (enable)
-    {
-        base->CCR |= MU_CCR_CLKE_MASK;
-    }
-    else
-    {
-        base->CCR &= ~MU_CCR_CLKE_MASK;
-    }
-#else  /* FSL_FEATURE_MU_HAS_CCR */
-    uint32_t reg = base->CR;
+// #if !(defined(FSL_FEATURE_MU_NO_CLKE) && FSL_FEATURE_MU_NO_CLKE)
+// /*!
+//  * @brief Enables or disables the clock on the other core.
+//  *
+//  * This function enables or disables the platform clock on the other core when
+//  * that core enters a stop mode. If disabled, the platform clock for the other
+//  * core is disabled when it enters stop mode. If enabled, the platform clock
+//  * keeps running on the other core in stop mode, until this core also enters
+//  * stop mode.
+//  *
+//  * @param base MU peripheral base address.
+//  * @param enable   Enable or disable the clock on the other core.
+//  */
+// static inline void MU_SetClockOnOtherCoreEnable(MU_Type *base, bool enable)
+// {
+// #if (defined(FSL_FEATURE_MU_HAS_CCR) && FSL_FEATURE_MU_HAS_CCR)
+//     if (enable)
+//     {
+//         base->CCR |= MU_CCR_CLKE_MASK;
+//     }
+//     else
+//     {
+//         base->CCR &= ~MU_CCR_CLKE_MASK;
+//     }
+// #else  /* FSL_FEATURE_MU_HAS_CCR */
+//     uint32_t reg = base->CR;
 
-    reg &= ~(MU_CR_GIRn_MASK | MU_CR_NMI_MASK);
+//     reg &= ~(MU_CR_GIRn_MASK | MU_CR_NMI_MASK);
 
-    if (enable)
-    {
-        reg |= MU_CR_CLKE_MASK;
-    }
-    else
-    {
-        reg &= ~MU_CR_CLKE_MASK;
-    }
+//     if (enable)
+//     {
+//         reg |= MU_CR_CLKE_MASK;
+//     }
+//     else
+//     {
+//         reg &= ~MU_CR_CLKE_MASK;
+//     }
 
-    base->CR = reg;
-#endif /* FSL_FEATURE_MU_HAS_CCR */
-}
-#endif /* FSL_FEATURE_MU_NO_CLKE */
+//     base->CR = reg;
+// #endif /* FSL_FEATURE_MU_HAS_CCR */
+// }
+// #endif /* FSL_FEATURE_MU_NO_CLKE */
 
 #if !(defined(FSL_FEATURE_MU_NO_PM) && FSL_FEATURE_MU_NO_PM)
 /*!
