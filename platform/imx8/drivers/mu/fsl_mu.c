@@ -7,6 +7,7 @@
  */
 
 #include "fsl_mu.h"
+#include "fsl_clock.h"
 
 /* Component ID definition, used by tools. */
 #ifndef FSL_COMPONENT_ID
