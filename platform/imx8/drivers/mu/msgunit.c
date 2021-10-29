@@ -22,18 +22,41 @@
 
 struct imx_msgunit_state {
     int bus_id;
+    uint32_t mu_channel;
+    uint32_t chan_irq_mask;
     MU_Type *io_base;
     mutex_t mutex;
     struct device *device;
-    msgunit_tx_cb_t tx_callbacks[MU_TR_COUNT];
-    msgunit_rx_cb_t rx_callbacks[MU_RR_COUNT];
+    msgunit_tx_cb_t tx_callback;
+    msgunit_rx_cb_t rx_callback;
     struct list_node node;
+};
+
+static uint32_t const tx_enable_masks[] = {
+    kMU_Tx0EmptyInterruptEnable, kMU_Tx1EmptyInterruptEnable,
+    kMU_Tx2EmptyInterruptEnable, kMU_Tx3EmptyInterruptEnable
+};
+
+static uint32_t const rx_enable_masks[] = {
+    kMU_Rx0FullInterruptEnable, kMU_Rx1FullInterruptEnable,
+    kMU_Rx2FullInterruptEnable, kMU_Rx3FullInterruptEnable
+};
+
+static uint32_t const gp_enable_masks[] = {
+    kMU_GenInt0InterruptEnable, kMU_GenInt1InterruptEnable,
+    kMU_GenInt1InterruptEnable, kMU_GenInt3InterruptEnable
+};
+
+static uint32_t const per_ch_irq_masks[] = {
+    ( kMU_Tx0EmptyFlag | kMU_Rx0FullFlag | kMU_GenInt0Flag ), // Channel 0
+    ( kMU_Tx1EmptyFlag | kMU_Rx1FullFlag | kMU_GenInt1Flag ), // Channel 1
+    ( kMU_Tx2EmptyFlag | kMU_Rx2FullFlag | kMU_GenInt2Flag ), // Channel 2
+    ( kMU_Tx3EmptyFlag | kMU_Rx3FullFlag | kMU_GenInt3Flag ) // Channel 3
 };
 
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-
 
 /*******************************************************************************
  * Forward Declarations
@@ -61,6 +84,13 @@ static inline struct msgunit_ops *get_ops(struct device *dev)
     return device_get_driver_ops(dev, struct msgunit_ops, std);
 }
 
+static inline void mask_all_irq(MU_Type *base, uint32_t channel)
+{
+    ASSERT( NULL != base );
+    uint32_t mask = tx_enable_masks[channel] | rx_enable_masks[channel] | gp_enable_masks[channel];
+    base->CR &= ~mask;
+}
+
 
 static struct list_node imx_msgunit_list = LIST_INITIAL_VALUE(imx_msgunit_list);
 static spin_lock_t imx_msgunit_list_lock = SPIN_LOCK_INITIAL_VALUE;
@@ -82,6 +112,18 @@ static status_t imx_msgunit_init(struct device *dev)
     state->bus_id = config->bus_id;
     TRACEF("Initializing Msg Unit with bus-id: %d\n", state->bus_id );
 
+    status = of_device_get_int32(dev, "channel", &(state->mu_channel) );
+    if( NO_ERROR != status )
+    {
+        TRACEF("Failed to get MU Channel!\n");
+        status = ERR_NOT_FOUND;
+        goto free_state;
+    }
+
+    state->chan_irq_mask = per_ch_irq_masks[state->mu_channel];
+    TRACEF("MU Channel is: %d\n", state->mu_channel);
+
+
     mutex_init(&state->mutex);
 
     struct device_cfg_reg *reg =
@@ -97,6 +139,9 @@ static status_t imx_msgunit_init(struct device *dev)
     TRACEF("Will now try to access the MU registers...\n");
     udelay(100000);
     state->io_base = (MU_Type*)reg->vbase;
+
+    // Make sure our interrupts are masked before proceeding
+    mask_all_irq(state->io_base, state->mu_channel);
 
     uint32_t sr = state->io_base->SR;
     TRACEF("MU CR = %x\n", sr);
@@ -122,55 +167,96 @@ static status_t imx_msgunit_init(struct device *dev)
     TRACE_EXIT;
 
     return 0;
+
+free_state:
+    if( state )
+    {
+        free( state );
+    }
+
+    return status;
 }
 
-static status_t msgunit_send_msg(struct device *dev, uint32_t reg_idx, uint32_t msg)
+static status_t msgunit_send_msg(struct device *dev, uint32_t msg)
 {
+    uint32_t reg_idx = get_state(dev)->mu_channel;
     MU_SendMsg( get_base(dev), reg_idx, msg );
     return NO_ERROR;
 }
 
-static status_t msgunit_receive_msg(struct device *dev, uint32_t reg_idx, uint32_t *dst)
+static status_t msgunit_receive_msg(struct device *dev, uint32_t *dst)
 {
     ASSERT(dst);
+    uint32_t reg_idx = get_state(dev)->mu_channel;
     *dst = MU_ReceiveMsg( get_base(dev), reg_idx);
     return NO_ERROR;
 }
 
-static status_t msgunit_register_tx_callback(struct device *dev, uint32_t idx, msgunit_tx_cb_t cb)
+static status_t msgunit_register_tx_callback(struct device *dev, msgunit_tx_cb_t cb)
 {
     TRACE_ENTRY;
 
-    if( idx >= MU_TR_COUNT ) {
-        TRACE_EXIT;
-        return ERR_NOT_FOUND;
-    }
-
-    if( get_state(dev)->tx_callbacks[idx] != NULL ) {
+    if( get_state(dev)->tx_callback != NULL ) {
         TRACE_EXIT;
         return ERR_ALREADY_BOUND;
     }
 
-    get_state(dev)->tx_callbacks[idx] = cb;
+    get_state(dev)->tx_callback = cb;
     TRACE_EXIT;
     return NO_ERROR;
 }
 
-static status_t msgunit_register_rx_callback(struct device *dev, uint32_t idx, msgunit_rx_cb_t cb)
+static status_t msgunit_register_rx_callback(struct device *dev, msgunit_rx_cb_t cb)
 {
-    if( idx >= MU_TR_COUNT ) {
-        TRACE_EXIT;
-        return ERR_NOT_FOUND;
-    }
-
-    if( get_state(dev)->rx_callbacks[idx] != NULL ) {
+    if( get_state(dev)->rx_callback != NULL ) {
         TRACE_EXIT;
         return ERR_ALREADY_BOUND;
     }
 
-    get_state(dev)->rx_callbacks[idx] = cb;
+    get_state(dev)->rx_callback = cb;
     TRACE_EXIT;
     return NO_ERROR;
+}
+
+static status_t msgunit_start(struct device *dev)
+{
+    TRACE_ENTRY;
+    // unmask rx interrupts for the active channel
+    get_base(dev)->CR |= ( rx_enable_masks[get_state(dev)->mu_channel] );
+    
+    // if MU interrupt disabled, enable it
+    // if( 0 == GIC_GetEnableIRQ(MU_A53_IRQn) ) {
+    //     TRACEF("Enabling MU_A53_IRQn\n");
+    //     GIC_EnableIRQ(MU_A53_IRQn);
+    // }
+
+    return 0;
+}
+
+static status_t msgunit_stop(struct device *dev)
+{
+    TRACE_ENTRY;
+    // mask tx and rx interrupts for the active channel
+
+    ASSERT( dev );
+    udelay(2000);
+    MU_Type * base = get_base(dev);
+    ASSERT ( base );
+    udelay(2000);
+    struct imx_msgunit_state *state = get_state(dev);
+    ASSERT(state);
+    udelay(2000);
+    base->CR &= ~( tx_enable_masks[state->mu_channel] |
+        rx_enable_masks[state->mu_channel] );
+    
+    // if MU interrupt enabled, disabled it
+    // if( GIC_GetEnableIRQ(MU_A53_IRQn) ) {
+    //     TRACEF("Disabling MU_A53_IRQn\n");
+    //     GIC_DisableIRQ(MU_A53_IRQn);
+    // }
+
+    TRACEF("Returning 0\n");
+    return 0;
 }
 
 static struct device_class msgunit_device_class = {
@@ -179,67 +265,67 @@ static struct device_class msgunit_device_class = {
 
 static struct msgunit_ops imx_msgunit_ops = {
     .std = {
-        .device_class = & msgunit_device_class,
-        .init = imx_msgunit_init,
+        .device_class = &msgunit_device_class,
+        .init = imx_msgunit_init
     },
+    .send_msg = msgunit_send_msg,
+    .receive_msg = msgunit_receive_msg,
     .register_tx_callback = msgunit_register_tx_callback,
     .register_rx_callback = msgunit_register_rx_callback,
-    .send_msg = msgunit_send_msg,
+    .start = msgunit_start,
+    .stop = msgunit_stop
 };
 
 DRIVER_EXPORT_WITH_LVL(msgunit, &imx_msgunit_ops.std, DRIVER_INIT_PLATFORM);
 
-static inline void invoke_tx_cb(msgunit_tx_cb_t *array, uint32_t idx)
-{
-    if( array[idx] ) {
-        array[idx]();
-    }
-}
-
-static inline void invoke_rx_cb(msgunit_rx_cb_t *array, uint32_t idx, uint32_t msg)
-{
-    if( array[idx] ) {
-        array[idx](msg);
-    }
-}
-
 static enum handler_return msgunit_isr (void *args)
 {
-    // figure out what kind of interrupt it is and handle
+    /*
+        This driver is intended to be used inside a Jailhouse guest,
+        where the Linux host might also be using the MU on a different channel.
+
+        Therefore we need to:
+        - not touch any settings not related to our own channel
+        - in the ISR, quickly determine if this interrupt pertains to 
+        our own channel and if not, get out fast
+    */
+
     struct device *dev = (struct device*)args;
     struct imx_msgunit_state *state = get_state(dev);
+    uint32_t flags = MU_GetStatusFlags( state->io_base );
+    if( !( flags & state->chan_irq_mask ) )
+    {
+        return INT_NO_RESCHEDULE;
+    }    
 
-    uint32_t flags = MU_GetStatusFlags( get_base(dev) );
+    // filter flags we don't care about
+    flags = flags & state->chan_irq_mask;
+    // TRACEF("flags: 0x%x\n", flags);
+
+    // clear interrupts pertaining to us
+    state->io_base->SR |= ( flags );
+
+    // flags = MU_GetStatusFlags( state->io_base ) & state->chan_irq_mask;
+    // TRACEF("flags after clear: 0x%x\n", flags);
 
     static const int txFlags[MU_TR_COUNT] = {
         kMU_Tx0EmptyFlag, kMU_Tx1EmptyFlag, kMU_Tx2EmptyFlag, kMU_Tx3EmptyFlag
     };
 
-    static const int txFlagsAll = (
-        kMU_Tx0EmptyFlag | kMU_Tx1EmptyFlag | kMU_Tx2EmptyFlag | kMU_Tx3EmptyFlag );
-
-    if( flags & txFlagsAll ) {
-        for( unsigned i=0; i<MU_TR_COUNT; ++i) {
-            if( flags & txFlags[i] )
-            {
-                invoke_tx_cb(state->tx_callbacks, i);
-            }
+    if( flags & txFlags[state->mu_channel] ) {
+        if( state->tx_callback ) {
+            state->tx_callback();
         }
     }
 
     static const int rxFlags[MU_RR_COUNT] = {
         kMU_Rx0FullFlag, kMU_Rx1FullFlag, kMU_Rx2FullFlag, kMU_Rx3FullFlag
     };
-
-    static const int rxFlagsAll = (
-        kMU_Rx0FullFlag | kMU_Rx1FullFlag | kMU_Rx2FullFlag | kMU_Rx3FullFlag );
     
-    if( flags & rxFlagsAll ) {
-        for( unsigned i=0; i<MU_RR_COUNT; ++i) {
-            if( flags & rxFlags[i] ) {
-                uint32_t msg = MU_ReceiveMsg( get_base(dev), i );
-                invoke_rx_cb( state->rx_callbacks, i, msg );
-            }
+    if( flags & rxFlags[state->mu_channel] ) {
+        uint32_t msg = MU_ReceiveMsg( get_base(dev), state->mu_channel );
+        if( state->rx_callback ) {
+            state->rx_callback(msg);
         }
     }
 
@@ -247,30 +333,64 @@ static enum handler_return msgunit_isr (void *args)
 }
 
 
-status_t class_msgunit_register_tx_callback(struct device *dev, uint32_t idx, msgunit_tx_cb_t cb)
+status_t class_msgunit_register_tx_callback(struct device *dev, msgunit_tx_cb_t cb)
 {
+    TRACE_ENTRY;
     struct msgunit_ops *ops = get_ops(dev);
     if( !ops ) {
         return ERR_NOT_CONFIGURED;
     }
 
     if( ops->register_tx_callback ){
-        return ops->register_tx_callback(dev, idx, cb);
+        return ops->register_tx_callback(dev, cb);
     }
     else {
         return ERR_NOT_SUPPORTED;
     }
 }
 
-status_t class_msgunit_register_rx_callback(struct device *dev, uint32_t idx, msgunit_rx_cb_t cb)
+status_t class_msgunit_register_rx_callback(struct device *dev, msgunit_rx_cb_t cb)
 {
+    TRACE_ENTRY;
     struct msgunit_ops *ops = get_ops(dev);
     if( !ops ) {
         return ERR_NOT_CONFIGURED;
     }
 
     if( ops->register_rx_callback ) {
-        return ops->register_rx_callback(dev, idx, cb);
+        return ops->register_rx_callback(dev, cb);
+    }
+    else {
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
+status_t class_msgunit_start(struct device *dev)
+{
+    TRACE_ENTRY;
+    struct msgunit_ops *ops = get_ops(dev);
+    if( !ops ) {
+        return ERR_NOT_CONFIGURED;
+    }
+
+    if( ops->start ) {
+        return ops->start(dev);
+    }
+    else {
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
+status_t class_msgunit_stop(struct device *dev)
+{
+    TRACE_ENTRY;
+    struct msgunit_ops *ops = get_ops(dev);
+    if( !ops ) {
+        return ERR_NOT_CONFIGURED;
+    }
+
+    if( ops->start ) {
+        return ops->stop(dev);
     }
     else {
         return ERR_NOT_SUPPORTED;
@@ -279,7 +399,7 @@ status_t class_msgunit_register_rx_callback(struct device *dev, uint32_t idx, ms
 
 struct device *class_msgunit_get_device_by_id(int id)
 {
-    TRACE_ENTRY;
+    TRACEF("id: %d\n", id);
     struct device *dev = NULL;
     struct imx_msgunit_state *state = NULL;
 
@@ -302,9 +422,9 @@ struct device *class_msgunit_get_device_by_id(int id)
     return dev;
 }
 
-status_t class_msgunit_send_msg(struct device *dev, uint32_t channel, uint32_t msg)
+status_t class_msgunit_send_msg(struct device *dev, uint32_t msg)
 {
-    TRACEF("called with dev: %p, channel: %d, msg: %d\n", dev, channel, msg);
+    TRACEF("called with dev: %p, msg: 0x%x\n", dev, msg);
     status_t retval = 0;
     struct msgunit_ops *ops = device_get_driver_ops(dev, struct msgunit_ops, std);
     if( !ops ) {
@@ -314,7 +434,7 @@ status_t class_msgunit_send_msg(struct device *dev, uint32_t channel, uint32_t m
     }
 
     if( ops->send_msg ) {
-        retval = ops->send_msg(dev, channel, msg);
+        retval = ops->send_msg(dev, msg);
         return retval;
     }
     else

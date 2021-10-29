@@ -13,3 +13,5 @@ blk.bin
 *.dSYM
 scripts/toolpaths.local
 .vscode
+scripts/jstart*
+

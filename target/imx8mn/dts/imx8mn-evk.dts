@@ -285,4 +285,5 @@
 
 &msgunit1 {
     status = "ok";
+    channel = < 3 >;
 };
