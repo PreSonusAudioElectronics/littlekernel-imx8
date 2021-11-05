@@ -18,7 +18,7 @@
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-#define LOCAL_TRACE 1
+#define LOCAL_TRACE 0
 
 struct imx_msgunit_state {
     int bus_id;
@@ -97,7 +97,7 @@ static spin_lock_t imx_msgunit_list_lock = SPIN_LOCK_INITIAL_VALUE;
 
 static status_t imx_msgunit_init(struct device *dev)
 {
-    TRACEF("called with dev: %p\n", dev);
+    LTRACEF("called with dev: %p\n", dev);
 
     const struct device_config_data *config = dev->config;
     struct imx_msgunit_state *state;
@@ -133,10 +133,10 @@ static status_t imx_msgunit_init(struct device *dev)
                         device_config_get_irq_by_name(config, "core");
     ASSERT(irq);
 
-    TRACEF("MU register base = %p\n", (void*)reg->base );
-    TRACEF("MU register vbase = %p\n", (void*)reg->vbase );
+    LTRACEF("MU register base = %p\n", (void*)reg->base );
+    LTRACEF("MU register vbase = %p\n", (void*)reg->vbase );
 
-    TRACEF("Will now try to access the MU registers...\n");
+    LTRACEF("Will now try to access the MU registers...\n");
     udelay(100000);
     state->io_base = (MU_Type*)reg->vbase;
 
@@ -144,9 +144,9 @@ static status_t imx_msgunit_init(struct device *dev)
     mask_all_irq(state->io_base, state->mu_channel);
 
     uint32_t sr = state->io_base->SR;
-    TRACEF("MU CR = %x\n", sr);
+    LTRACEF("MU CR = %x\n", sr);
 
-    TRACEF("Registering MU ISR to interrupt vector %d..\n", irq->irq );
+    LTRACEF("Registering MU ISR to interrupt vector %d..\n", irq->irq );
     status = register_int_handler(irq->irq, msgunit_isr, dev);
     ASSERT( NO_ERROR == status );    
     
@@ -164,7 +164,7 @@ static status_t imx_msgunit_init(struct device *dev)
 
     spin_unlock_irqrestore(&imx_msgunit_list_lock, lock_state );
 
-    TRACE_EXIT;
+    LTRACE_EXIT;
 
     return 0;
 
@@ -194,33 +194,33 @@ static status_t msgunit_receive_msg(struct device *dev, uint32_t *dst)
 
 static status_t msgunit_register_tx_callback(struct device *dev, msgunit_tx_cb_t cb)
 {
-    TRACE_ENTRY;
+    LTRACE_ENTRY;
 
     if( get_state(dev)->tx_callback != NULL ) {
-        TRACE_EXIT;
+        LTRACE_EXIT;
         return ERR_ALREADY_BOUND;
     }
 
     get_state(dev)->tx_callback = cb;
-    TRACE_EXIT;
+    LTRACE_EXIT;
     return NO_ERROR;
 }
 
 static status_t msgunit_register_rx_callback(struct device *dev, msgunit_rx_cb_t cb)
 {
     if( get_state(dev)->rx_callback != NULL ) {
-        TRACE_EXIT;
+        LTRACE_EXIT;
         return ERR_ALREADY_BOUND;
     }
 
     get_state(dev)->rx_callback = cb;
-    TRACE_EXIT;
+    LTRACE_EXIT;
     return NO_ERROR;
 }
 
 static status_t msgunit_start(struct device *dev)
 {
-    TRACE_ENTRY;
+    LTRACE_ENTRY;
     // unmask rx interrupts for the active channel
     get_base(dev)->CR |= ( rx_enable_masks[get_state(dev)->mu_channel] );
     
@@ -235,7 +235,7 @@ static status_t msgunit_start(struct device *dev)
 
 static status_t msgunit_stop(struct device *dev)
 {
-    TRACE_ENTRY;
+    LTRACE_ENTRY;
     // mask tx and rx interrupts for the active channel
 
     ASSERT( dev );
@@ -255,7 +255,6 @@ static status_t msgunit_stop(struct device *dev)
     //     GIC_DisableIRQ(MU_A53_IRQn);
     // }
 
-    TRACEF("Returning 0\n");
     return 0;
 }
 
@@ -300,13 +299,9 @@ static enum handler_return msgunit_isr (void *args)
 
     // filter flags we don't care about
     flags = flags & state->chan_irq_mask;
-    // TRACEF("flags: 0x%x\n", flags);
 
     // clear interrupts pertaining to us
     state->io_base->SR |= ( flags );
-
-    // flags = MU_GetStatusFlags( state->io_base ) & state->chan_irq_mask;
-    // TRACEF("flags after clear: 0x%x\n", flags);
 
     static const int txFlags[MU_TR_COUNT] = {
         kMU_Tx0EmptyFlag, kMU_Tx1EmptyFlag, kMU_Tx2EmptyFlag, kMU_Tx3EmptyFlag
@@ -335,7 +330,7 @@ static enum handler_return msgunit_isr (void *args)
 
 status_t class_msgunit_register_tx_callback(struct device *dev, msgunit_tx_cb_t cb)
 {
-    TRACE_ENTRY;
+    LTRACE_ENTRY;
     struct msgunit_ops *ops = get_ops(dev);
     if( !ops ) {
         return ERR_NOT_CONFIGURED;
@@ -351,7 +346,7 @@ status_t class_msgunit_register_tx_callback(struct device *dev, msgunit_tx_cb_t 
 
 status_t class_msgunit_register_rx_callback(struct device *dev, msgunit_rx_cb_t cb)
 {
-    TRACE_ENTRY;
+    LTRACE_ENTRY;
     struct msgunit_ops *ops = get_ops(dev);
     if( !ops ) {
         return ERR_NOT_CONFIGURED;
@@ -367,7 +362,7 @@ status_t class_msgunit_register_rx_callback(struct device *dev, msgunit_rx_cb_t 
 
 status_t class_msgunit_start(struct device *dev)
 {
-    TRACE_ENTRY;
+    LTRACE_ENTRY;
     struct msgunit_ops *ops = get_ops(dev);
     if( !ops ) {
         return ERR_NOT_CONFIGURED;
@@ -383,7 +378,7 @@ status_t class_msgunit_start(struct device *dev)
 
 status_t class_msgunit_stop(struct device *dev)
 {
-    TRACE_ENTRY;
+    LTRACE_ENTRY;
     struct msgunit_ops *ops = get_ops(dev);
     if( !ops ) {
         return ERR_NOT_CONFIGURED;
@@ -399,14 +394,14 @@ status_t class_msgunit_stop(struct device *dev)
 
 struct device *class_msgunit_get_device_by_id(int id)
 {
-    TRACEF("id: %d\n", id);
+    LTRACEF("id: %d\n", id);
     struct device *dev = NULL;
     struct imx_msgunit_state *state = NULL;
 
     spin_lock_saved_state_t lock_state;
     spin_lock_irqsave(&imx_msgunit_list_lock, lock_state);
 
-    TRACEF("About to try parsing the list...\n");
+    LTRACEF("About to try parsing the list...\n");
 
     list_for_every_entry(&imx_msgunit_list, state, struct imx_msgunit_state, node) {
         if (state->bus_id == id) {
@@ -417,19 +412,18 @@ struct device *class_msgunit_get_device_by_id(int id)
 
     spin_unlock_irqrestore(&imx_msgunit_list_lock, lock_state);
 
-    TRACEF("will return %p\n", dev);
-    TRACE_EXIT;
+    LTRACE_EXIT;
     return dev;
 }
 
 status_t class_msgunit_send_msg(struct device *dev, uint32_t msg)
 {
-    TRACEF("called with dev: %p, msg: 0x%x\n", dev, msg);
+    LTRACEF("called with dev: %p, msg: 0x%x\n", dev, msg);
     status_t retval = 0;
     struct msgunit_ops *ops = device_get_driver_ops(dev, struct msgunit_ops, std);
     if( !ops ) {
-        TRACEF("Couldn't find driver ops!\n");
-        TRACEF("exit at line %d\n", __LINE__);
+        LTRACEF("Couldn't find driver ops!\n");
+        LTRACEF("exit at line %d\n", __LINE__);
         return ERR_NOT_CONFIGURED;
     }
 
@@ -439,7 +433,7 @@ status_t class_msgunit_send_msg(struct device *dev, uint32_t msg)
     }
     else
     {
-        TRACEF("No send_msg function registered!\n");
+        LTRACEF("No send_msg function registered!\n");
         return ERR_NOT_SUPPORTED;
     }
 }
