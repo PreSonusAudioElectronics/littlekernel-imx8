@@ -6,6 +6,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
     $(LOCAL_DIR)/app_external.c \
 
-#EXTRA_OBJS :=
+# Guide to external libraries
+EXTRA_LINK_LIBS += app pep
+GLOBAL_LDFLAGS += -L../../ \
+                  -L../../lib/pep \
 
 include make/module.mk

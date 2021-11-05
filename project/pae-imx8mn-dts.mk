@@ -4,6 +4,8 @@ TARGET := imx8mn/dts
 
 MODULES += \
 	app/external \
+	lib/klog \
+	lib/version
 
 MODULES += \
         dev/ivshmem/services/console \
