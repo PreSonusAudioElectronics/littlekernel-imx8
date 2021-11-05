@@ -12,7 +12,6 @@ MODULES += \
 	app/audio_mixer \
 	app/hifiberry \
 	app/spdif \
-	app/testfunc \
 	lib/dpc \
 	lib/klog \
 	lib/version
