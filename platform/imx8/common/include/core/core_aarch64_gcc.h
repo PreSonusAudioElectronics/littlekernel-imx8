@@ -60,10 +60,10 @@
 #define __CORE_stringify(x...)       __CORE_stringify_1(x)
 
 #define __MSR(sysreg, val) \
-  asm volatile ("msr "__CORE_stringify(sysreg)", %0\n" : : "r"((uint64_t)(val)))
+  asm volatile ("msr " __CORE_stringify(sysreg)", %0\n" : : "r"((uint64_t)(val)))
 
 #define __MRS(sysreg, val) \
-  asm volatile ("mrs  %0, "__CORE_stringify(sysreg)"\n" : "=r"((val)))
+  asm volatile ("mrs  %0, " __CORE_stringify(sysreg)"\n" : "=r"((val)))
 
 #define __DSB_SY() \
   asm volatile ("dsb sy")

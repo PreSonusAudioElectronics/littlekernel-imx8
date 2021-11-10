@@ -37824,23 +37824,23 @@ typedef struct
 
 /* MU - Peripheral instance base addresses */
 /** Peripheral MUB base address */
-#define MUB_BASE SOC_REGS(0x30AB0000u)
+#define MUA_BASE SOC_REGS(0x30AA0000u)
 /** Peripheral MUB base pointer */
-#define MUB ((MU_Type *)MUB_BASE)
+#define MUA ((MU_Type *)MUA_BASE)
 /** Array initializer of MU peripheral base addresses */
 #define MU_BASE_ADDRS \
     {                 \
-        MUB_BASE      \
+        MUA_BASE      \
     }
 /** Array initializer of MU peripheral base pointers */
 #define MU_BASE_PTRS \
     {                \
-        MUB          \
+        MUA          \
     }
 /** Interrupt vectors for the MU peripheral type */
 #define MU_IRQS    \
     {              \
-        MU_M7_IRQn \
+        MU_A53_IRQn \
     }
 /* Backward compatibility */
 #define MU_SR_PM_MASK MU_SR_APM_MASK

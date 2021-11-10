@@ -526,6 +526,23 @@
             compatible = "nxp,aips";
             reg = < 0x30800000 0x400000>;
 
+            uart3: uart@30880000 {
+                compatible = "nxp,uart";
+                bus-id = <0>;
+                reg = < 0x30880000 0x10000 >;
+                reg-names = "core";
+
+                interrupts = < 60 >;
+                interrupt-names = "core";
+
+                clock-names = "core";
+                clock-cfg = <
+                    kCLOCK_Idx_RootUart3 kCLOCK_UartRootmuxSysPll1Div10 1 1 kCLOCK_Uart3 80000000
+                >;
+
+                status = "disabled";
+            };
+
             uart4: uart@30A60000 {
                 compatible = "nxp,uart";
                 bus-id = <0>;
@@ -558,6 +575,18 @@
                 clock-cfg = <
                     kCLOCK_Idx_RootI2c3 kCLOCK_I2cRootmuxSysPll1Div5 1 4 kCLOCK_I2c3 40000000
                 >;
+
+                status = "disabled";
+            };
+        
+            msgunit1: msgunit@30AA0000 {
+                compatible = "msgunit";
+                bus-id = <1>;
+                reg = < 0x30AA0000 0x10000 >;
+                reg-names = "core";
+
+                interrupts = < 120 >;
+                interrupt-names = "core";
 
                 status = "disabled";
             };

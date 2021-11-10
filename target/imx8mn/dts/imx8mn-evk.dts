@@ -282,3 +282,8 @@
         /* TODO: Add GPIO definition */
     };
 };
+
+&msgunit1 {
+    status = "ok";
+    channel = < 3 >;
+};

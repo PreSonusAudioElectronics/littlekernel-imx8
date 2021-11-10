@@ -76,6 +76,9 @@ MODULE_DEPS += \
 MODULE_DEPS += \
 	$(LOCAL_DIR)/drivers/clock
 
+MODULE_DEPS += \
+	$(LOCAL_DIR)/drivers/mu
+
 ifeq ($(IMX_ENABLE_ASRC_HW), y)
 IMX_USE_ASRC_HW := 1
 MODULE_DEPS += \
