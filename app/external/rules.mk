@@ -5,6 +5,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/app_external.c \
+    $(LOCAL_DIR)/cxa.cpp \
 
 # Guide to external libraries
 EXTRA_LINK_LIBS += app pep

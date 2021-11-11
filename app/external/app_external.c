@@ -39,7 +39,7 @@
 #include <kernel/thread.h>
 
 /* Provided by external library */
-extern void lk_app_entry(void* args);
+void lk_app_entry(void* args);
 
 void app_external_entry(const struct app_descriptor *app, void *args)
 {
