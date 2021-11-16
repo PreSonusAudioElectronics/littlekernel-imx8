@@ -4,6 +4,7 @@
 #include "ivshmem-endpoint.h"
 #include "ivshmem-serial.h"
 #include <debug.h>
+#include <assert.h>
 // #include <lib/klog.h>
 #include <stdio.h>
 
@@ -11,10 +12,13 @@ static struct ivshm_endpoint *ep_serial;
 
 #define MIN(x, y) ((x < y) ? x : y)
 
+#define IVSHM_SERIAL_ECHO_BUF_SIZE (512)
+
 #include <lib/console.h>
 #include <string.h>
-static void ivshm_start_logger(struct ivshm_endpoint *);
-static void ivshm_stop_logger(struct ivshm_endpoint *);
+static void ivshm_start_serial(struct ivshm_endpoint *);
+static void ivshm_stop_serial(struct ivshm_endpoint *);
+
 
 static ssize_t ivshm_serial_consume(struct ivshm_endpoint *ep, struct ivshm_pkt *pkt)
 {
@@ -23,6 +27,14 @@ static ssize_t ivshm_serial_consume(struct ivshm_endpoint *ep, struct ivshm_pkt 
 
     printf("payload : %lu bytes strlen %lu, content: %s",
           len, strnlen(payload, len), payload);
+
+    // echo back
+    struct ivshm_ep_buf ep_buf;
+    static char buf[IVSHM_SERIAL_ECHO_BUF_SIZE];
+    memcpy(buf, payload, len);
+    ivshm_ep_buf_init(&ep_buf);
+    ivshm_ep_buf_add(&ep_buf, buf, len);
+    ivshm_endpoint_write(ep, &ep_buf);
 
     return 0;
 }
@@ -38,14 +50,16 @@ int ivshm_init_serial(struct ivshm_info *info)
                  0
              );
 
-    ivshm_start_logger(ep_serial);
+    DEBUG_ASSERT(NULL != ep_serial );
+
+    ivshm_start_serial(ep_serial);
 
     return 0;
 }
 
 void ivshm_exit_serial(struct ivshm_info *info)
 {
-    ivshm_stop_logger(ep_serial);
+    ivshm_stop_serial(ep_serial);
     ivshm_endpoint_destroy(ep_serial);
 }
 
@@ -53,7 +67,6 @@ void ivshm_exit_serial(struct ivshm_info *info)
 #include <lib/cbuf.h>
 #include <lib/io.h>
 #include <string.h>
-#include "assert.h"
 
 struct ivshm_serial {
     print_callback_t print_cb;
@@ -64,15 +77,15 @@ struct ivshm_serial {
     struct ivshm_endpoint *ep;
 };
 
-#ifndef IVSHM_CONSOLE_BUFFER_SIZE
-#define IVSHM_CONSOLE_BUFFER_SIZE (16 * 1024)
+#ifndef IVSHM_SERIAL_BUFFER_SIZE
+#define IVSHM_SERIAL_BUFFER_SIZE (16 * 1024)
 #endif
 #ifndef IVSHM_LOGGER_BUF_SIZE
 #define IVSHM_LOGGER_BUF_SIZE 4096
 #endif
 
 
-static char ivshm_serial_buf[IVSHM_CONSOLE_BUFFER_SIZE];
+static char ivshm_serial_buf[IVSHM_SERIAL_BUFFER_SIZE];
 
 static struct ivshm_serial _ivshm_serial;
 static struct ivshm_serial *_con = &_ivshm_serial;
@@ -85,25 +98,27 @@ static int ivshm_serial_thread(void *arg)
     iovec_t regions[2];
     size_t payload_sz;
 
-    while (con->running) {
-        ivshm_ep_buf_init(&ep_buf);
-        event_wait(&con->tx_buf.event);
-        payload_sz = cbuf_peek(&con->tx_buf, regions);
-        DEBUG_ASSERT(payload_sz > 0);
-        ivshm_ep_buf_add(&ep_buf, regions[0].iov_base, regions[0].iov_len);
-        if (regions[1].iov_len)
-            ivshm_ep_buf_add(&ep_buf, regions[1].iov_base, regions[1].iov_len);
+    while (con->running) 
+    {
+        thread_yield();
+        // ivshm_ep_buf_init(&ep_buf);
+        // event_wait(&con->tx_buf.event);
+        // payload_sz = cbuf_peek(&con->tx_buf, regions);
+        // DEBUG_ASSERT(payload_sz > 0);
+        // ivshm_ep_buf_add(&ep_buf, regions[0].iov_base, regions[0].iov_len);
+        // if (regions[1].iov_len)
+        //     ivshm_ep_buf_add(&ep_buf, regions[1].iov_base, regions[1].iov_len);
 
-        ivshm_endpoint_write(con->ep, &ep_buf);
+        // ivshm_endpoint_write(con->ep, &ep_buf);
 
-        cbuf_read(&con->tx_buf, NULL, payload_sz, false);
+        // cbuf_read(&con->tx_buf, NULL, payload_sz, false);
     }
 
     return 0;
 }
 
 
-static void ivshm_start_logger(struct ivshm_endpoint *ep)
+static void ivshm_start_serial(struct ivshm_endpoint *ep)
 {
 
     struct ivshm_serial *con = _con;
@@ -122,7 +137,7 @@ static void ivshm_start_logger(struct ivshm_endpoint *ep)
     thread_resume(con->thread);
 }
 
-static void ivshm_stop_logger(struct ivshm_endpoint *ep)
+static void ivshm_stop_serial(struct ivshm_endpoint *ep)
 {
     struct ivshm_serial *con = _con;
     int retcode;
@@ -142,7 +157,7 @@ static void ivshm_hook_serial_init(unsigned level)
 {
     memset(_con, 0x0, sizeof(*_con));
 
-    cbuf_initialize_etc(&_con->tx_buf, IVSHM_CONSOLE_BUFFER_SIZE, &ivshm_serial_buf);
+    cbuf_initialize_etc(&_con->tx_buf, IVSHM_SERIAL_BUFFER_SIZE, &ivshm_serial_buf);
 
     spin_lock_init(&_con->tx_lock);
 
@@ -153,4 +168,5 @@ static void ivshm_hook_serial_init(unsigned level)
 }
 
 LK_INIT_HOOK(ivshm_serial, ivshm_hook_serial_init, LK_INIT_LEVEL_PLATFORM_EARLY - 1);
+
 
