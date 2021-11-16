@@ -38,6 +38,10 @@
 #include "ivshmem-rpc.h"
 #endif /* WITH_DEV_IVSHMEM_SERVICES_RPC */
 
+#if defined WITH_DEV_IVSHMEM_SERVICES_SERIAL
+#include "ivshmem-serial.h"
+#endif
+
 #include "ivshmem-services.h"
 
 
@@ -54,6 +58,9 @@ static struct s_ivshm_services {
 #endif
 #if defined WITH_DEV_IVSHMEM_SERVICES_RPC
     { .init = ivshm_init_rpc, .remove = ivshm_exit_rpc, .name = "rpc"},
+#endif
+#if defined WITH_DEV_IVSHMEM_SERVICES_SERIAL
+    { .init = ivshm_init_serial, .remove = ivshm_exit_serial, .name = "serial" },
 #endif
 };
 
