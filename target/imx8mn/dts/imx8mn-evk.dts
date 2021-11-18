@@ -68,6 +68,13 @@
         status = "disabled";
     };
 
+    rpmsg-serial0 {
+        compatible = "ivshm_serial";
+        id = <0x400>;
+        size = <0x200>;
+        status = "ok";
+    };
+
     wm8524 {
         compatible = "dac_wm8524";
         bus-id = < 1 >;
