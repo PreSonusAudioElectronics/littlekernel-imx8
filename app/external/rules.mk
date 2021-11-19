@@ -1,6 +1,5 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
@@ -11,5 +10,9 @@ MODULE_SRCS += \
 EXTRA_LINK_LIBS += app pep
 GLOBAL_LDFLAGS += -L../../ \
                   -L../../lib/pep \
+
+# Set dependencies on the library outputs
+EXTRA_LINKER_DEPS += ../../libapp.a \
+                     ../../lib/libpep.a \
 
 include make/module.mk
