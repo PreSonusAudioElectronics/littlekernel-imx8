@@ -68,9 +68,18 @@
         status = "disabled";
     };
 
-    rpmsg-serial0 {
+    tty_lk_transport {
         compatible = "ivshm_serial";
+        id_str = "lk_transport";
         id = <0x400>;
+        size = <0x200>;
+        status = "ok";
+    };
+
+    tty_lk_dsp {
+        compatible = "ivshm_serial";
+        id_str = "lk_dsp";
+        id = <0x401>;
         size = <0x200>;
         status = "ok";
     };
