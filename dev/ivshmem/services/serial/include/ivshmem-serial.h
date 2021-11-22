@@ -2,6 +2,7 @@
 #ifndef __IVSHMEM_SERIAL_H
 #define __IVSHMEM_SERIAL_H
 #include <stddef.h>
+#include <compiler.h>
 
 __BEGIN_CDECLS
 
@@ -34,6 +35,16 @@ void ivshm_exit_serial(struct ivshm_info *);
  * \return int NO_ERROR if succesful, otherwise error code
  */
 int ivshm_serial_register_rx_cb(unsigned id, ivshm_serial_rx_cb_t cb);
+
+/*!
+ * \brief Un-register whatever callback is registered for this id
+ * If no callback is registered, this has no effect.
+ * 
+ * \param id the ivshmem instance to do this action on.  Must be the same as
+ * the "id" field in the device tree.
+ * \return int NO_ERROR if this port id was found, otherwise ERR_NOT_FOUND
+ */
+int ivshm_serial_unregister_rx_cb(unsigned id);
 
 /*!
  * \brief Put one char into an ivshmem serial stream

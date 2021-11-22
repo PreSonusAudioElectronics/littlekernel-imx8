@@ -178,6 +178,17 @@ int ivshm_serial_register_rx_cb(unsigned id, ivshm_serial_rx_cb_t cb)
     return NO_ERROR;
 }
 
+int ivshm_serial_unregister_rx_cb(unsigned id)
+{
+    struct ivshm_serial_service *service = _get_service(id);
+    if( !service ) {
+        return ERR_NOT_FOUND;
+    }
+
+    service->rx_cb = NULL;
+    return 0;
+}
+
 int ivshm_serial_getchars_noblock(unsigned id, char *buf, uint16_t buflen)
 {
     int ret = 0;
