@@ -377,7 +377,7 @@ static status_t ivshm_serial_dev_init(struct device *dev)
                        ivshm_serial_consume,
                        info,
                        ep_size,
-                       0 // fixme
+                       0
                    );
 
     if (!service->ept) {
