@@ -187,9 +187,14 @@ int ivshm_serial_unregister_rx_cb(unsigned id)
         return ERR_NOT_FOUND;
     }
 
+    int ret = 0;
+    if( service->rx_cb )
+    {
+        ret = 1;
+    }
     service->buffer_rx = true;
     service->rx_cb = NULL;
-    return 0;
+    return ret;
 }
 
 char const *ivshm_serial_get_name(unsigned id)

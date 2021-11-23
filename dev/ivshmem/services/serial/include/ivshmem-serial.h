@@ -42,7 +42,7 @@ int ivshm_serial_register_rx_cb(unsigned id, ivshm_serial_rx_cb_t cb);
  * 
  * \param id the ivshmem instance to do this action on.  Must be the same as
  * the "id" field in the device tree.
- * \return int NO_ERROR if this port id was found, otherwise ERR_NOT_FOUND
+ * \return int number of callbacks removed, or ERR_NOT_FOUND if id not found
  */
 int ivshm_serial_unregister_rx_cb(unsigned id);
 
