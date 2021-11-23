@@ -28,6 +28,8 @@
 #define IVSHM_SERIAL_TX_BUF_SIZE (64)
 #define IVSHM_SERIAL_SERVICENAME_MAX_SIZE (128)
 
+#define LOCAL_TRACE (0)
+
 /******************************************************************************/
 // Types
 /******************************************************************************/
@@ -185,8 +187,19 @@ int ivshm_serial_unregister_rx_cb(unsigned id)
         return ERR_NOT_FOUND;
     }
 
+    service->buffer_rx = true;
     service->rx_cb = NULL;
     return 0;
+}
+
+char const *ivshm_serial_get_name(unsigned id)
+{
+    struct ivshm_serial_service *service = _get_service(id);
+    if( !service ) {
+        return NULL;
+    }
+
+    return service->name;
 }
 
 int ivshm_serial_getchars_noblock(unsigned id, char *buf, uint16_t buflen)
@@ -237,7 +250,7 @@ static ssize_t ivshm_serial_consume(struct ivshm_endpoint *ep, struct ivshm_pkt 
     size_t len = ivshm_pkt_get_payload_length(pkt);
     unsigned id = IVSHM_EP_GET_ID(ep->id);
 
-    TRACEF("recvd %lu bytes on ept %d, content: '%s' \n", len, id, payload);
+    LTRACEF("recvd %lu bytes on ept %d, content: '%s' \n", len, id, payload);
 
     // get the service struct and either buffer or send it to callback
     struct ivshm_serial_service *service = _get_service(id);
@@ -252,8 +265,10 @@ static ssize_t ivshm_serial_consume(struct ivshm_endpoint *ep, struct ivshm_pkt 
     else
     {
         // we're in callback mode
-        DEBUG_ASSERT( NULL != service->rx_cb );
-        service->rx_cb(id, payload, len);
+        if( service->rx_cb ) 
+        {
+            service->rx_cb(id, payload, len);
+        }
     }
     return 0;
 }

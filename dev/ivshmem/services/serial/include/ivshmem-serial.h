@@ -47,6 +47,14 @@ int ivshm_serial_register_rx_cb(unsigned id, ivshm_serial_rx_cb_t cb);
 int ivshm_serial_unregister_rx_cb(unsigned id);
 
 /*!
+ * \brief Get the service name (if any) of the given endpoint id
+ * 
+ * \param id endpoint id
+ * \return char const* name, or NULL if service not found
+ */
+char const *ivshm_serial_get_name(unsigned id);
+
+/*!
  * \brief Put one char into an ivshmem serial stream
  * 
  * \param id Endpoint id of the ivshm serial path
