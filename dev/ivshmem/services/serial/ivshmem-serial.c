@@ -53,7 +53,7 @@ struct ivshm_serial_service {
 // File-scope Globals
 /******************************************************************************/
 static struct list_node serial_service_list =
-        LIST_INITIAL_VALUE(serial_service_list);
+    LIST_INITIAL_VALUE(serial_service_list);
 
 /*!
  * \brief and event for signalling when the ivshmem is ready to run
@@ -64,7 +64,7 @@ static event_t ivshm_ready_evt = EVENT_INITIAL_VALUE(ivshm_ready_evt, 0, 0);
 // Forward Declarations
 /******************************************************************************/
 static inline struct ivshm_serial_service
-                        *_get_service(unsigned id);
+*_get_service(unsigned id);
 static inline void write_chars(struct ivshm_serial_service *service, char *buf, unsigned len);
 
 /******************************************************************************/
@@ -83,15 +83,15 @@ void ivshm_exit_serial(struct ivshm_info *info)
     int ret = 0;
 
     list_for_every_entry_safe(&serial_service_list, service, next,
-        struct ivshm_serial_service, node) {
-            service->running = false;
-            thread_join(service->thread, &ret, 5000);
-            mutex_destroy(&service->tx_lock);
-            free(service->tx_cbuf.buf);
-            ivshm_endpoint_destroy(service->ept);
-            list_delete(&service->node);
-            free(service);
-        }
+                              struct ivshm_serial_service, node) {
+        service->running = false;
+        thread_join(service->thread, &ret, 5000);
+        mutex_destroy(&service->tx_lock);
+        free(service->tx_cbuf.buf);
+        ivshm_endpoint_destroy(service->ept);
+        list_delete(&service->node);
+        free(service);
+    }
 }
 
 int ivshm_serial_putchar(unsigned id, char c)
@@ -100,7 +100,7 @@ int ivshm_serial_putchar(unsigned id, char c)
     int ret = 0;
 
     service = _get_service(id);
-    if(!service) {
+    if (!service) {
         return ERR_NOT_FOUND;
     }
 
@@ -112,8 +112,7 @@ int ivshm_serial_putchar(unsigned id, char c)
 
     // If buffer is empty, send directly
     size_t used = cbuf_space_used(cbuf);
-    if( 0 == used )
-    {
+    if ( 0 == used ) {
         write_chars(service, &c, 1);
         ret = 1;
         goto unlock;
@@ -121,8 +120,7 @@ int ivshm_serial_putchar(unsigned id, char c)
 
     // Otherwise, if buffer is full return ERR and drop char
     size_t avail = cbuf_space_avail(cbuf);
-    if( 0 == avail )
-    {
+    if ( 0 == avail ) {
         ret = -1;
         goto unlock;
     }
@@ -142,12 +140,12 @@ inline int ivshm_getchar_noblock(char *out)
 
 int ivshm_serial_register_rx_cb(unsigned id, ivshm_serial_rx_cb_t cb)
 {
-    if(!cb){
+    if (!cb) {
         return ERR_INVALID_ARGS;
     }
 
     struct ivshm_serial_service *service = _get_service(id);
-    if( !service ) {
+    if ( !service ) {
         return ERR_NOT_FOUND;
     }
 
@@ -158,18 +156,16 @@ int ivshm_serial_register_rx_cb(unsigned id, ivshm_serial_rx_cb_t cb)
     mutex_acquire(&service->rx_cbuf_lock);
     size_t nchars_buffered = cbuf_space_used(&service->rx_cbuf);
     char tmpbuf[IVSHM_SERIAL_RX_CB_MAX_LEN];
-    while( nchars_buffered > 0 ) 
-    {
+    while ( nchars_buffered > 0 ) {
         size_t n_2_read;
-        if( nchars_buffered > IVSHM_SERIAL_RX_CB_MAX_LEN ) 
-        {
+        if ( nchars_buffered > IVSHM_SERIAL_RX_CB_MAX_LEN ) {
             n_2_read = IVSHM_SERIAL_RX_CB_MAX_LEN;
-        } else 
-        {
+        }
+        else {
             n_2_read = nchars_buffered;
         }
         size_t n_read = cbuf_read(&service->rx_cbuf, tmpbuf, n_2_read, true);
-        
+
         cb(id, tmpbuf, n_read);
 
         nchars_buffered -= n_read;
@@ -183,13 +179,12 @@ int ivshm_serial_register_rx_cb(unsigned id, ivshm_serial_rx_cb_t cb)
 int ivshm_serial_unregister_rx_cb(unsigned id)
 {
     struct ivshm_serial_service *service = _get_service(id);
-    if( !service ) {
+    if ( !service ) {
         return ERR_NOT_FOUND;
     }
 
     int ret = 0;
-    if( service->rx_cb )
-    {
+    if ( service->rx_cb ) {
         ret = 1;
     }
     service->buffer_rx = true;
@@ -200,7 +195,7 @@ int ivshm_serial_unregister_rx_cb(unsigned id)
 char const *ivshm_serial_get_name(unsigned id)
 {
     struct ivshm_serial_service *service = _get_service(id);
-    if( !service ) {
+    if ( !service ) {
         return NULL;
     }
 
@@ -211,24 +206,25 @@ int ivshm_serial_getchars_noblock(unsigned id, char *buf, uint16_t buflen)
 {
     int ret = 0;
 
-    if(!buf) {
+    if (!buf) {
         return ERR_NO_MEMORY;
     }
 
     struct ivshm_serial_service *service = _get_service(id);
-    if(!service) {
+    if (!service) {
         return ERR_NOT_FOUND;
     }
 
     mutex_acquire(&service->rx_cbuf_lock);
     size_t n_2_read = cbuf_space_used(&service->rx_cbuf);
-    if( n_2_read > 0 ){
-        if( n_2_read > buflen ) {
+    if ( n_2_read > 0 ) {
+        if ( n_2_read > buflen ) {
             n_2_read = buflen;
         }
 
         ret = cbuf_read(&service->rx_cbuf, buf, n_2_read, false);
-    } else {
+    }
+    else {
         ret = 0;
     }
     mutex_release(&service->rx_cbuf_lock);
@@ -259,19 +255,16 @@ static ssize_t ivshm_serial_consume(struct ivshm_endpoint *ep, struct ivshm_pkt 
 
     // get the service struct and either buffer or send it to callback
     struct ivshm_serial_service *service = _get_service(id);
-    if( service->buffer_rx )
-    {
+    if ( service->buffer_rx ) {
         // service in buffered mode so put data into the buffer
         mutex_acquire(&service->rx_cbuf_lock);
         size_t n_buffered = cbuf_write(&service->rx_cbuf, payload, len, true);
         mutex_release(&service->rx_cbuf_lock);
         DEBUG_ASSERT( n_buffered == len );
     }
-    else
-    {
+    else {
         // we're in callback mode
-        if( service->rx_cb ) 
-        {
+        if ( service->rx_cb ) {
             service->rx_cb(id, payload, len);
         }
     }
@@ -279,13 +272,12 @@ static ssize_t ivshm_serial_consume(struct ivshm_endpoint *ep, struct ivshm_pkt 
 }
 
 static inline struct ivshm_serial_service
-                        *_get_service(unsigned id)
+*_get_service(unsigned id)
 {
     struct ivshm_serial_service *service;
 
     list_for_every_entry(&serial_service_list, service,
-                         struct ivshm_serial_service, node) 
-    {
+                         struct ivshm_serial_service, node) {
         if (service->id == id)
             return service;
     }
@@ -302,8 +294,7 @@ static int ivshm_serial_tx_thread(void *arg)
     iovec_t regions[2];
     size_t payload_sz;
 
-    while (service->running) 
-    {      
+    while (service->running) {
         ivshm_ep_buf_init(&ep_buf);
         event_wait(&service->tx_cbuf.event);
         payload_sz = cbuf_peek(&service->tx_cbuf, regions);
@@ -324,20 +315,20 @@ static int ivshm_serial_tx_thread(void *arg)
 static inline void print_err_property(char *property_name)
 {
     printlk(LK_ERR, "%s:%d: Endpoint %s property cannot be read, aborting!\n",
-        __PRETTY_FUNCTION__, __LINE__, property_name);
+            __PRETTY_FUNCTION__, __LINE__, property_name);
 }
 
 static status_t ivshm_serial_dev_init(struct device *dev)
 {
     int ret = NO_ERROR;
     char *property_name = NULL;
-    char * cbuf_mem = NULL;
+    char *cbuf_mem = NULL;
     char name[IVSHM_EP_MAX_NAME];
     uint32_t id, ep_size;
     struct ivshm_serial_service *service = NULL;
 
     struct ivshm_dev_data *ivshm_dev = ivshm_get_device(0);
-    if(!ivshm_dev) {
+    if (!ivshm_dev) {
         return ERR_NOT_READY;
     }
 
@@ -346,16 +337,16 @@ static status_t ivshm_serial_dev_init(struct device *dev)
         return ERR_NOT_READY;
     }
 
-    property_name = (char*)"id";
+    property_name = (char *)"id";
     ret = of_device_get_int32(dev, property_name, &id);
-    if(ret) {
+    if (ret) {
         print_err_property(property_name);
         return ERR_NOT_FOUND;
     }
 
-    property_name = (char*)"size";
+    property_name = (char *)"size";
     ret = of_device_get_int32(dev, property_name, &ep_size);
-    if(ret) {
+    if (ret) {
         print_err_property(property_name);
         return ERR_NOT_FOUND;
     }
@@ -363,16 +354,16 @@ static status_t ivshm_serial_dev_init(struct device *dev)
     DEBUG_ASSERT(ep_size < IVSHM_MAX_CBUF_SIZE);
 
     service = malloc(sizeof(struct ivshm_serial_service));
-    if(!service) {
+    if (!service) {
         ret = ERR_NO_MEMORY;
         goto cleanup;
     }
-    
+
     memset(service, 0, sizeof(struct ivshm_serial_service));
 
-    property_name = (char*)"id_str";
+    property_name = (char *)"id_str";
     ret = of_device_get_strings(dev, property_name, &service->name, 1);
-    if( 1 != ret ) {
+    if ( 1 != ret ) {
         TRACEF("Failed to get id_str!\n");
         ret = ERR_NOT_FOUND;
         goto cleanup;
@@ -381,38 +372,38 @@ static status_t ivshm_serial_dev_init(struct device *dev)
     service->id = id;
     snprintf(name, IVSHM_EP_MAX_NAME, "serial_%u_%s", service->id, service->name);
     service->ept = ivshm_endpoint_create(
-            name,
-            service->id,
-            ivshm_serial_consume,
-            info,
-            ep_size,
-            0 // fixme
-        );
-    
-    if(!service->ept) {
+                       name,
+                       service->id,
+                       ivshm_serial_consume,
+                       info,
+                       ep_size,
+                       0 // fixme
+                   );
+
+    if (!service->ept) {
         ret = ERR_NO_MEMORY;
         goto cleanup;
     }
 
     printf("\n%s:%u: new endpoint id = %u\n", __PRETTY_FUNCTION__, __LINE__,
-        IVSHM_EP_GET_ID(service->ept->id) );
+           IVSHM_EP_GET_ID(service->ept->id) );
 
     // Setup tx thread to transmit queued buffers
-    char const * prefix = "ivshm-serial";
+    char const *prefix = "ivshm-serial";
     char name_buf[32];
     size_t len = strnlen(prefix, 32);
     memcpy(name_buf, prefix, len);
     snprintf(name_buf + len, 32-len, "%u", id);
     service->thread = thread_create(
-        name_buf,
-        ivshm_serial_tx_thread,
-        (void*)service,
-        IVSHM_EP_GET_PRIO(service->ept->id),
-        DEFAULT_STACK_SIZE );
+                          name_buf,
+                          ivshm_serial_tx_thread,
+                          (void *)service,
+                          IVSHM_EP_GET_PRIO(service->ept->id),
+                          DEFAULT_STACK_SIZE );
 
     // initialize tx circ buffer
     cbuf_mem = malloc(ep_size);
-    if(!cbuf_mem) {
+    if (!cbuf_mem) {
         ret = ERR_NO_MEMORY;
         goto cleanup;
     }
@@ -421,7 +412,7 @@ static status_t ivshm_serial_dev_init(struct device *dev)
     // initialize the rx circ buffer
     cbuf_mem = NULL;
     cbuf_mem = malloc(ep_size);
-    if(!cbuf_mem) {
+    if (!cbuf_mem) {
         ret = ERR_NO_MEMORY;
         goto cleanup;
     }
@@ -429,7 +420,7 @@ static status_t ivshm_serial_dev_init(struct device *dev)
 
     // initialize tx buffer
     service->tx_buf = malloc(IVSHM_SERIAL_TX_BUF_SIZE);
-    if(!service->tx_buf) {
+    if (!service->tx_buf) {
         ret = ERR_NO_MEMORY;
         goto cleanup;
     }
@@ -444,15 +435,15 @@ static status_t ivshm_serial_dev_init(struct device *dev)
     return ret;
 
 cleanup:
-    if(service->tx_buf) { free(service->tx_buf); }
-    if(service->rx_cbuf.buf) { free(service->rx_cbuf.buf); }
-    if(service->tx_cbuf.buf) { free(service->tx_cbuf.buf); }
-    if(service->ept) { ivshm_endpoint_destroy(service->ept); }
-    if(service->thread) {
+    if (service->tx_buf) { free(service->tx_buf); }
+    if (service->rx_cbuf.buf) { free(service->rx_cbuf.buf); }
+    if (service->tx_cbuf.buf) { free(service->tx_cbuf.buf); }
+    if (service->ept) { ivshm_endpoint_destroy(service->ept); }
+    if (service->thread) {
         thread_join(service->thread, NULL, 5000);
         free(service->thread);
     }
-    if(service) { free(service); }
+    if (service) { free(service); }
 
     return ret;
 }

@@ -87,7 +87,7 @@ int ivshm_init_services(struct ivshm_info *info)
 
         if (ret)
             printlk(LK_ERR, "%s:%d: Error during initialization of ivshm service %s\n",
-                __PRETTY_FUNCTION__, __LINE__, ivshm_services[i].name);
+                    __PRETTY_FUNCTION__, __LINE__, ivshm_services[i].name);
         else
             ivshm_services_mask |= (1ULL << i);
 unlock:
