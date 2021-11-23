@@ -145,7 +145,6 @@ static inline int ivshm_ep_buf_add(struct ivshm_ep_buf *buf, void *base, size_t 
 #define IVSHM_EP_ID_EVENT_MANAGER       0x205
 
 /* Customer endpoints - Starting from 0x400 */
-#define IVSHM_EP_ID_SERIAL              0x400
 
 /* Endpoint usefull macros */
 #define EP_ID_MASK                      0xFFFF
