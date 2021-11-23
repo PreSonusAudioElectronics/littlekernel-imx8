@@ -11,6 +11,7 @@ MODULES += \
         dev/ivshmem/services/console \
         dev/ivshmem/services/binary \
         dev/ivshmem/services/rpc \
+		dev/ivshmem/services/serial
 
 #GLOBAL_DEFINES += \
 

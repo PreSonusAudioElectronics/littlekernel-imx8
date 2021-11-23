@@ -20,6 +20,7 @@ MODULES += \
         dev/ivshmem/services/console \
         dev/ivshmem/services/binary \
         dev/ivshmem/services/rpc \
+		dev/ivshmem/services/serial \
 
 MODULES += \
 	dev/pca6416 \
@@ -30,7 +31,8 @@ MODULES += \
 GLOBAL_DEFINES += \
 	IMX_SAI_PERMISSIVE=1 \
 	IMX_SAI_WARMUP_NR_PERIODS=1 \
-	IMX_SAI_WARMUP_NR_PERIODS_FRAC=4
+	IMX_SAI_WARMUP_NR_PERIODS_FRAC=4 \
+	AF_LK_LOGLEVEL=6 \
 
 include project/virtual/test.mk
 
