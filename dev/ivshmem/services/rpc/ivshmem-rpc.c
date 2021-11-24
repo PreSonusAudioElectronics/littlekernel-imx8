@@ -76,7 +76,7 @@ struct ivshm_rpc_service *ivshm_get_rpc_service(unsigned id)
 }
 
 int ivshm_rpc_call(struct ivshm_rpc_service *service, unsigned rpc_id,
-                       void *in, size_t len, void *out, size_t *out_len)
+                   void *in, size_t len, void *out, size_t *out_len)
 {
     struct ivshm_ep_buf ep_buf;
     struct ivshm_rpc_header *hdr_out, hdr_in = {
@@ -243,7 +243,7 @@ void *ivshm_rpc_get_data(struct ivshm_rpc_service *service)
 }
 
 static status_t ivshm_rpc_send(struct ivshm_rpc_service *service,
-            unsigned rpc_id, void *in, size_t len, void *out, size_t *out_len)
+                               unsigned rpc_id, void *in, size_t len, void *out, size_t *out_len)
 {
     int ret;
 
@@ -265,7 +265,7 @@ static status_t ivshm_rpc_send(struct ivshm_rpc_service *service,
 }
 
 status_t ivshm_rpc_cmd(struct ivshm_rpc_service *service,
-            unsigned rpc_id)
+                       unsigned rpc_id)
 {
     status_t ret;
     int retcode;
@@ -291,7 +291,7 @@ error:
 }
 
 status_t ivshm_rpc_cmd_get(struct ivshm_rpc_service *service,
-                                        unsigned rpc_id, void *in, size_t sz)
+                           unsigned rpc_id, void *in, size_t sz)
 {
     status_t ret;
     size_t response_sz = sz;
@@ -309,7 +309,7 @@ error:
 }
 
 status_t ivshm_rpc_cmd_set(struct ivshm_rpc_service *service,
-                                        unsigned rpc_id, void *in, size_t sz)
+                           unsigned rpc_id, void *in, size_t sz)
 {
     status_t ret;
     unsigned retcode = 0;
@@ -351,7 +351,8 @@ static ssize_t ivshm_rpc_consume(struct ivshm_endpoint *ep,
     if (hdr->type == IVSHM_RPC_REPLY) {
         /* wake up client thread */
         event_signal(&service->wait, false);
-    } else if (hdr->type == IVSHM_RPC_CALL) {
+    }
+    else if (hdr->type == IVSHM_RPC_CALL) {
         /* Look for callback and jump in */
         int i = 0;
         struct rpc_client_callback *rpc_callback;
@@ -372,7 +373,8 @@ static ssize_t ivshm_rpc_consume(struct ivshm_endpoint *ep,
         }
 
         return rpc_callback->fn(service, rpc_callback, hdr->payload);
-    } else {
+    }
+    else {
         panic("Unsupported command type\n");
     }
 
@@ -393,7 +395,7 @@ void ivshm_exit_rpc(struct ivshm_info *info)
     printlk(LK_VERBOSE, "%s: entry\n", __PRETTY_FUNCTION__);
 
     list_for_every_entry_safe(&rpc_service_list, service, temp,
-                         struct ivshm_rpc_service, node) {
+                              struct ivshm_rpc_service, node) {
 
         list_delete(&service->node);
         free(service->buf);
@@ -434,13 +436,13 @@ static status_t ivshm_rpc_dev_init(struct device *dev)
 
     snprintf(name, IVSHM_EP_MAX_NAME, "rpc-%u", id);
     ep = ivshm_endpoint_create(
-                name,
-                id,
-                ivshm_rpc_consume,
-                info,
-                RPC_BUFFER_SIZE,
-                sizeof(struct ivshm_rpc_service)
-                );
+             name,
+             id,
+             ivshm_rpc_consume,
+             info,
+             RPC_BUFFER_SIZE,
+             sizeof(struct ivshm_rpc_service)
+         );
 
     service = to_ivshm_rpc_service(ep);
     memset(service, 0, sizeof(struct ivshm_rpc_service));
