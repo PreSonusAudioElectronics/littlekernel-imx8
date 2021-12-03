@@ -16,7 +16,6 @@
 #include <lib/console.h>
 #include <dev/driver.h>
 #include <dev/ivshm.h>
-#include <err.h>
 
 #include <string.h>
 #include <stdlib.h>
