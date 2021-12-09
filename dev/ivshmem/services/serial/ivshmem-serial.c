@@ -16,7 +16,6 @@
 #include <lib/console.h>
 #include <dev/driver.h>
 #include <dev/ivshm.h>
-#include <err.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -248,10 +247,11 @@ static inline void write_chars(struct ivshm_serial_service *service, char *buf, 
 static ssize_t ivshm_serial_consume(struct ivshm_endpoint *ep, struct ivshm_pkt *pkt)
 {
     char *payload = (char *) &pkt->payload;
-    size_t len = ivshm_pkt_get_payload_length(pkt);
-    unsigned id = IVSHM_EP_GET_ID(ep->id);
 
-    LTRACEF("recvd %lu bytes on ept %d, content: '%s' \n", len, id, payload);
+    // apparently, the ivshmem endpoint appends a null char, so we need to drop it
+    size_t len = ivshm_pkt_get_payload_length(pkt) - 1;
+    
+    unsigned id = IVSHM_EP_GET_ID(ep->id);
 
     // get the service struct and either buffer or send it to callback
     struct ivshm_serial_service *service = _get_service(id);

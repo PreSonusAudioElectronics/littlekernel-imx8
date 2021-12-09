@@ -3,6 +3,7 @@
 #define __IVSHMEM_SERIAL_H
 #include <stddef.h>
 #include <compiler.h>
+#include <err.h>
 
 __BEGIN_CDECLS
 
