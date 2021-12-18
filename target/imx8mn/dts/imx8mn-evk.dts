@@ -68,7 +68,7 @@
         status = "disabled";
     };
 
-    tty_lk_transport {
+    lk_transport_server {
         compatible = "ivshm_serial";
         id_str = "lk_transport";
         id = <0x400>;
@@ -76,10 +76,18 @@
         status = "ok";
     };
 
-    tty_lk_dsp {
+    lk_dsp {
         compatible = "ivshm_serial";
         id_str = "lk_dsp";
         id = <0x401>;
+        size = <0x200>;
+        status = "ok";
+    };
+
+    lk_transport_client {
+        compatible = "ivshm_serial";
+        id_str = "lk_dsp";
+        id = <0x402>;
         size = <0x200>;
         status = "ok";
     };
