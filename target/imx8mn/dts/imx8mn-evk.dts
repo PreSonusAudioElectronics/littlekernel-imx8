@@ -70,7 +70,7 @@
 
     lk_transport_server {
         compatible = "ivshm_serial";
-        id_str = "lk_transport";
+        id_str = "lk_transport_server";
         id = <0x400>;
         size = <0x200>;
         status = "ok";
@@ -86,7 +86,7 @@
 
     lk_transport_client {
         compatible = "ivshm_serial";
-        id_str = "lk_dsp";
+        id_str = "lk_transport_client";
         id = <0x402>;
         size = <0x200>;
         status = "ok";
