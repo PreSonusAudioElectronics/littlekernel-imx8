@@ -12,7 +12,8 @@ MODULES += \
         dev/ivshmem/services/console \
         dev/ivshmem/services/binary \
         dev/ivshmem/services/rpc \
-		dev/ivshmem/services/serial
+		dev/ivshmem/services/serial \
+		dev/dac/wm8524 
 
 #GLOBAL_DEFINES += \
 
