@@ -1877,7 +1877,13 @@ static status_t imx_sai_tx_prefill_fifo(struct device *dev)
     unsigned watermark;
     watermark = state->tx_period.fifo_prefill * 2;
 #if defined(IMX_SAI_PREFILL_WITH_ZERO) && (IMX_SAI_PREFILL_WITH_ZERO == 0)
-    watermark -= handle->watermark;
+    if( handle->watermark > watermark )
+    {
+        watermark = 0;
+    } else
+    {
+        watermark -= handle->watermark;
+    }
 #endif
 
 #if defined(FSL_FEATURE_SAI_FIFO_COUNT) && (FSL_FEATURE_SAI_FIFO_COUNT > 1)
