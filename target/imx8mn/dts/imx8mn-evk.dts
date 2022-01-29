@@ -193,7 +193,8 @@
     /* mclk set as an output */
     mclk,is-output = < 1 >;
 
-    disable-dma-tx;
+    /* set tx dma to zero-copy cached mode */
+    tx,dma-mode = < 2 >;
 };
 
 &sai5 {
