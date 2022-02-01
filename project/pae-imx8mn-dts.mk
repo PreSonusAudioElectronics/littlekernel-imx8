@@ -13,7 +13,11 @@ MODULES += \
         dev/ivshmem/services/binary \
         dev/ivshmem/services/rpc \
 		dev/ivshmem/services/serial \
-		dev/dac/wm8524 
+		dev/dac/wm8524 \
+		dev/pinctrl
+
+# GLOBAL_OPTFLAGS += -g3 -Og
+# DEBUG := 2
 
 #GLOBAL_DEFINES += \
 
