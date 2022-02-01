@@ -434,8 +434,8 @@ static inline unsigned imx_sai_tx_get_warmup_frames(struct imx_sai_state *state,
         ) \
     ) >> I2S_TCSR_FRIE_SHIFT)
 
-#define IMX_SAI_FIFO_WATERMARK_RX   (FSL_FEATURE_SAI_FIFO_COUNT / 2)
-#define IMX_SAI_FIFO_WATERMARK_TX   (FSL_FEATURE_SAI_FIFO_COUNT / 2)
+#define IMX_SAI_FIFO_WATERMARK_RX   (FSL_FEATURE_SAI_FIFO_COUNT / 4)
+#define IMX_SAI_FIFO_WATERMARK_TX   (FSL_FEATURE_SAI_FIFO_COUNT / 4)
 #define IMX_SAI_PERIOD_SIZE_TX      (IMX_SAI_FIFO_WATERMARK_TX / 2)
 
 static bool imx_sai_pop_from_tx_circ_buffer(struct imx_sai_state *state,

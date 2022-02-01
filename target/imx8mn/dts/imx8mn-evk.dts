@@ -201,8 +201,8 @@
     /* mclk set as an output */
     mclk,is-output = < 1 >;
 
-    /* set tx dma to zero-copy cached mode */
-    tx,dma-mode = < 2 >;
+    /* set tx dma to zero-copy un-cached mode */
+    tx,dma-mode = < 1 >;
 };
 
 &sai5 {
