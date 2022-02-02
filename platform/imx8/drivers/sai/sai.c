@@ -3162,7 +3162,7 @@ static status_t imx_sai_rx_setup(struct device *dev, sai_format_t *pfmt)
 
     ASSERT(state->is_dummy_rx ||
            (unsigned)(pfmt->num_channels / slots) <= imx_sai_get_max_lanes(dev, true, true));
-
+    
     /* Master/ Slave mode selection */
     if ( (state->rx_is_slave ? ksai_Slave : ksai_Master) != pfmt->master_slave) {
         printlk(LK_INFO, "%s:%d: SAI%d RX configuration (%s) overrides HAL configuration (%s)\n",
@@ -3244,14 +3244,19 @@ static status_t imx_sai_rx_setup(struct device *dev, sai_format_t *pfmt)
     rx_format->protocol = config.protocol;
 
     if (pfmt->num_channels >= 2)
+    {
         rx_format->stereo = kSAI_Stereo;
+        rx_format->isFrameSyncCompact = (pfmt->num_channels > 2) ? true : false;
+    }
     else
+    {
         rx_format->stereo = kSAI_MonoRight;
+        rx_format->isFrameSyncCompact = false;
+    }
 
     rx_format->audio_channel = pfmt->num_channels;
     rx_format->slot = slots;
 
-    rx_format->isFrameSyncCompact = false;
 
 #if defined(FSL_FEATURE_SAI_FIFO_COUNT) && (FSL_FEATURE_SAI_FIFO_COUNT > 1)
     rx_format->watermark = IMX_SAI_FIFO_WATERMARK_RX - 1;
