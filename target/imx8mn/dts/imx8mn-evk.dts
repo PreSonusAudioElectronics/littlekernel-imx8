@@ -104,7 +104,8 @@
         compatible = "pin_controller";
         bus-id = < 1 >;
         status = "ok";
-        dbg-gpio = <&gpio5 8 0>;
+        dbg-gpio1 = <&gpio5 8 0>;
+        dbg-gpio2 = <&gpio5 9 0>;
     };
 };
 
@@ -206,7 +207,7 @@
 };
 
 &sai5 {
-    status = "disabled";
+    status = "ok";
 
     pinctrl-names = "default";
     pinctrl-0 = <
@@ -221,11 +222,11 @@
 
     /* bit clock polarity (0: active high, 1 active low,
      * other keep default according to i2s format) */
-    rx,bcp = < 1 >;
-    tx,bcp = < 1 >;
+    rx,bcp = < 0 >;
+    tx,bcp = < 0 >;
     /* mclk source selection (0: bus clock, 1: MCLK1, 2: MCLK2, 3: MCLK3 */
-    rx,mclk-select = < 1 >;
-    tx,mclk-select = < 1 >;
+    rx,mclk-select = < 2 >;
+    tx,mclk-select = < 2 >;
 
     disable-dma-tx;
     disable-dma-rx;

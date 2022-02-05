@@ -14,13 +14,16 @@ MODULES += \
         dev/ivshmem/services/rpc \
 		dev/ivshmem/services/serial \
 		dev/dac/wm8524 \
-		dev/pinctrl
+		dev/pinctrl \
+		dev/adc/ak55xx
 
-GLOBAL_OPTFLAGS += -g3 -Og
+GLOBAL_OPTFLAGS += -Og
+GLOBAL_COMPILEFLAGS += -g3
 DEBUG = 8
 
 GLOBAL_DEFINES += \
-	IMX_SAI_WARMUP_NR_PERIODS=1 \
+	IMX_SAI_WARMUP_NR_PERIODS=8 \
+	AF_LK_LOGLEVEL=6
 
 # global defines for debugging:
 # AF_LK_LOGLEVEL=6

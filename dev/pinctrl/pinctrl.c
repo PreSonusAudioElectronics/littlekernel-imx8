@@ -13,6 +13,7 @@
 #include <string.h>
 #include <assert.h>
 #include <list.h>
+#include <debug.h>
 
 #include <kernel/spinlock.h>
 
@@ -27,7 +28,8 @@
 struct pin_controller_state {
     int bus_id;
     struct device *device;
-    struct gpio_desc dbg_gpio;
+    struct gpio_desc dbg_gpio1;
+    struct gpio_desc dbg_gpio2;
     struct list_node node;
 };
 
@@ -49,8 +51,16 @@ static status_t pin_controller_init(struct device *dev)
 
     dev->state = state;
 
-    ret = gpio_request_by_name(dev, "dbg-gpio",
-                        &state->dbg_gpio,
+    ret = gpio_request_by_name(dev, "dbg-gpio1",
+                        &state->dbg_gpio1,
+                        GPIO_DESC_OUTPUT | GPIO_DESC_OUTPUT_ACTIVE);
+    if (ret) {
+        printf("Failed to request debug gpio for pin_controller: %d\n", ret);
+        return ret;
+    }
+
+    ret = gpio_request_by_name(dev, "dbg-gpio2",
+                        &state->dbg_gpio2,
                         GPIO_DESC_OUTPUT | GPIO_DESC_OUTPUT_ACTIVE);
     if (ret) {
         printf("Failed to request debug gpio for pin_controller: %d\n", ret);
@@ -82,7 +92,16 @@ static status_t pin_controller_close(struct device *dev)
 static status_t pin_controller_pin_write(struct device *dev, uint8_t pin_idx, uint8_t wr_val)
 {
     struct pin_controller_state *state = dev->state;
-    gpio_desc_set_value(&state->dbg_gpio, wr_val);
+    struct gpio_desc * desc;
+    switch (pin_idx)
+    {
+        case 0: desc = &state->dbg_gpio1; break;
+        case 1: desc = &state->dbg_gpio2; break;
+        default:
+            printlk(LK_ERR, "attempt to access non-existant pin!n\n");
+            ASSERT(false);
+    };
+    gpio_desc_set_value(desc, wr_val);
     return 0;
 }
 

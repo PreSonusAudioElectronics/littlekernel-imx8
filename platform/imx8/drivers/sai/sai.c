@@ -60,8 +60,11 @@
 #include <platform.h>
 #include <math.h>
 #include <debug.h>
+#include <trace.h>
 
 #include <platform/imx_common.h>
+
+#define LOCAL_TRACE 1
 
 #define SAI_DMA_PAYLOAD_PATTERN 0x7F
 #define SAI_DMA_PREFILL_PATTERN 0x0
@@ -608,8 +611,6 @@ static bool imx_sai_push_to_rx_circ_buffer(struct imx_sai_state *state,
     sai_handle_t *handle = &state->sai_rx_handle;
     bool reschedule = false;
     size_t written = 0;
-    printlk(LK_VERBOSE, "hw state: (%x), Pushing %ld to rx circular buffer\n",
-            handle->state, xfer_len);
 
 #if defined(IMX_SAI_PERMISSIVE) && (IMX_SAI_PERMISSIVE == 1)
     size_t avail = cbuf_space_avail(&state->rx_circ_buf);
@@ -624,14 +625,26 @@ static bool imx_sai_push_to_rx_circ_buffer(struct imx_sai_state *state,
     ASSERT(written == xfer_len);
 #endif
 
-    if (handle->xfer_remaining > 0) {
+    size_t used = cbuf_space_used(&state->rx_circ_buf);
+    // printf("push %ld\n", written);
+    // LTRACEF("hw state: (%x), pushed %ld to rx cbuf at %p, used now: %lu\n",
+    //         handle->state, xfer_len, &state->rx_circ_buf, used);
+    
+    if (handle->xfer_remaining > 0) 
+    {
         handle->xfer_remaining -= written;
-        if ((handle->xfer_remaining <= 0) ||
-            (cbuf_space_used(&state->rx_circ_buf) > handle->cbuf_watermark)) {
+        if ((handle->xfer_remaining <= 0) || (used > handle->cbuf_watermark)) 
+        {
             handle->xfer_remaining = MAX(0, handle->xfer_remaining);
             event_signal(&state->rx_wait, false);
             reschedule = true;
         }
+    }
+
+    if (state->rx_cb && (used >= state->rx_period.size) ) 
+    {
+        smp_mb();
+        state->rx_cb(SAI_EVENT_DATA_RDY, &handle->xfer_remaining, state->rx_cb_cookie);
     }
     return reschedule;
 }
@@ -2291,7 +2304,7 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
     smp_mb();
     if (sai_handle->dma_chan) {
         struct dma_descriptor *olddesc = sai_handle->dma_chan->desc;
-        printlk(LK_DEBUG, "SAI%d: Terminating a pending dma channel\n", state->bus_id);
+        LTRACEF("SAI%d: Terminating a pending dma channel\n", state->bus_id);
         dma_terminate_sync(sai_handle->dma_chan);
         free(olddesc);
         sai_handle->dma_chan = NULL;
@@ -2307,16 +2320,18 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
 
     int slots = format->slot;
 
-    printlk(LK_DEBUG, "SAI%d: DMA: format->audio_channel = 0x%x\n", state->bus_id, format->audio_channel);
-    printlk(LK_DEBUG, "SAI%d: DMA: format->slot = 0x%x\n", state->bus_id, format->slot);
-    printlk(LK_DEBUG, "SAI%d: DMA: format->channelMask = 0x%x\n", state->bus_id, format->channelMask);
-    printlk(LK_DEBUG, "SAI%d: DMA: fifo_num = 0x%x\n", state->bus_id, fifo_num);
-    printlk(LK_DEBUG, "SAI%d: DMA: sai_handle->channelMask = 0x%x\n", state->bus_id, sai_handle->channelMask);
-    printlk(LK_DEBUG, "SAI%d: DMA: sai_handle->channelNums = 0x%x\n", state->bus_id, sai_handle->channelNums);
-    printlk(LK_DEBUG, "SAI%d: DMA: sai_handle->endChannel = 0x%x\n", state->bus_id, sai_handle->endChannel);
-    printlk(LK_DEBUG, "SAI%d: DMA: sai_handle->channel = 0x%x\n", state->bus_id, sai_handle->channel);
-    printlk(LK_DEBUG, "SAI%d: DMA: sai_handle->burst_length = 0x%x\n", state->bus_id, sai_handle->burst_length);
-    printlk(LK_DEBUG, "SAI%d: DMA: sai_handle->watermark = 0x%x\n", state->bus_id, sai_handle->watermark);
+    LTRACEF("SAI%d: DMA: format->audio_channel = 0x%x\n", state->bus_id, format->audio_channel);
+    LTRACEF("SAI%d: DMA: format->slot = 0x%x\n", state->bus_id, format->slot);
+    LTRACEF("SAI%d: DMA: format->channelMask = 0x%x\n", state->bus_id, format->channelMask);
+    LTRACEF("SAI%d: DMA: fifo_num = 0x%x\n", state->bus_id, fifo_num);
+    LTRACEF("SAI%d: DMA: sai_handle->channelMask = 0x%x\n", state->bus_id, sai_handle->channelMask);
+    LTRACEF("SAI%d: DMA: sai_handle->channelNums = 0x%x\n", state->bus_id, sai_handle->channelNums);
+    LTRACEF("SAI%d: DMA: sai_handle->endChannel = 0x%x\n", state->bus_id, sai_handle->endChannel);
+    LTRACEF("SAI%d: DMA: sai_handle->channel = 0x%x\n", state->bus_id, sai_handle->channel);
+    LTRACEF("SAI%d: DMA: sai_handle->burst_length = %d\n", state->bus_id, sai_handle->burst_length);
+    LTRACEF("SAI%d: DMA: sai_handle->watermark = %d\n", state->bus_id, sai_handle->watermark);
+    LTRACEF("SAI%d: DMA: sai_handle->sai_handle->dma_chan = %p\n", state->bus_id, sai_handle->dma_chan);
+    LTRACEF("SAI%d: DMA: period->size = %d\n", state->bus_id, period->size);
 
     /* Set bytes_per_request as the required amount of data to get all FIFOs full */
     bytes_per_request = sai_handle->burst_length;
@@ -2333,7 +2348,7 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
                 break;
             }
         }
-        printlk(LK_VERBOSE, "start_lane = %d\n", start_lane);
+        LTRACEF("start_lane = %d\n", start_lane);
 
         cfg_dma.src_addr = SAI_RxGetDataRegisterAddress(state->io_base, start_lane);
         if (kSAI_BusI2SPDM == format->protocol)
@@ -2401,8 +2416,8 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
     cfg_dma.dst_sample_num = slots;
     cfg_dma.src_maxburst = bytes_per_request;
     cfg_dma.dst_maxburst = cfg_dma.src_maxburst;
-    printlk(LK_DEBUG, "cfg_dma.src_addr_width=%d\n", cfg_dma.src_addr_width);
-    printlk(LK_DEBUG, "cfg_dma.src_maxburst=%d\n", cfg_dma.src_maxburst);
+    LTRACEF("cfg_dma.src_addr_width=%d\n", cfg_dma.src_addr_width);
+    LTRACEF("cfg_dma.src_maxburst=%d\n", cfg_dma.src_maxburst);
 
     dma_driver_data->dma_period_elapsed = 0;
 
@@ -2412,7 +2427,7 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
     dma_driver_data->dma_period_size =
         remainder ? dma_period_size + cfg_dma.src_maxburst - remainder : dma_period_size;
 
-    printlk(LK_DEBUG,
+    LTRACEF(
             "sai%d: period->size=%d, dma_period_size=%d, cfg_dma.src_maxburst=%d, remainder=%d, dma_driver_data->dma_period_size=%d\n",
             state->bus_id, period->size, dma_period_size, cfg_dma.src_maxburst,
             remainder, dma_driver_data->dma_period_size);
@@ -2420,7 +2435,7 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
     if (dma_driver_data->dma_period_size > dma_driver_data->dma_period_size_max) {
         dma_driver_data->dma_period_size = dma_driver_data->dma_period_size_max;
     }
-    printlk(LK_DEBUG, "sai%d: %s dma_period_size = %d\n", state->bus_id,
+    LTRACEF("sai%d: %s dma_period_size = %d\n", state->bus_id,
                   channel_name, dma_driver_data->dma_period_size);
     ASSERT(dma_driver_data->dma_period_size != 0);
 
@@ -2449,7 +2464,7 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
         dma_driver_data->dma_buffer_phys =
             phys_to_dma(vaddr_to_paddr(dma_driver_data->dma_buffer));
 
-        printlk(LK_DEBUG, "sai%d: dma_prep_dma_cyclic: paddr=%lx\n",
+        LTRACEF("sai%d: dma_prep_dma_cyclic: paddr=%lx\n",
                     state->bus_id, dma_driver_data->dma_buffer_phys);
 
         dma_desc = dma_prep_dma_cyclic(
@@ -2496,12 +2511,12 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
 
         if (state->tx_period.fifo_prefill == 0) {
             state->tx_period.fifo_prefill = bytes_per_request / sample_size;
-            printlk(LK_DEBUG, "sai%d: Inserting unnecessary samples: %d\n", state->bus_id,
+            LTRACEF("sai%d: Inserting unnecessary samples: %d\n", state->bus_id,
                                             state->tx_period.fifo_prefill);
         }
 
         if (state->tx_period.fifo_prefill > IMX_SAI_PREFILL_WITH_ZERO) {
-            printlk(LK_DEBUG, "sai%d: Clamping to %d samples from %d\n", state->bus_id,
+            LTRACEF("sai%d: Clamping to %d samples from %d\n", state->bus_id,
                                             IMX_SAI_PREFILL_WITH_ZERO,
                                             state->tx_period.fifo_prefill);
             state->tx_period.fifo_prefill = IMX_SAI_PREFILL_WITH_ZERO;
@@ -2509,21 +2524,21 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
 
         state->tx_period.dma_period_prefill = state->dma_tx_driver_data.dma_period_elapsed;
 
-        printlk(LK_DEBUG, "sai%d: tx om period prefill ratio = %f\n",
+        LTRACEF("sai%d: tx om period prefill ratio = %f\n",
                 state->bus_id, ratio);
-        printlk(LK_DEBUG, "sai%d: tx dma periods prefill = %d\n",
+        LTRACEF("sai%d: tx dma periods prefill = %d\n",
                 state->bus_id, state->tx_period.dma_period_prefill);
-        printlk(LK_DEBUG, "sai%d: state->dma_tx_driver_data.dma_period_size=%d\n",
+        LTRACEF("sai%d: state->dma_tx_driver_data.dma_period_size=%d\n",
                 state->bus_id,state->dma_tx_driver_data.dma_period_size);
-        printlk(LK_DEBUG, "sai%d: state->dma_tx_driver_data.dma_nr_periods=%d\n",
+        LTRACEF("sai%d: state->dma_tx_driver_data.dma_nr_periods=%d\n",
                 state->bus_id,state->dma_tx_driver_data.dma_nr_periods);
-        printlk(LK_DEBUG, "sai%d: state->dma_tx_driver_data.dma_buffer_phys=%lx\n",
+        LTRACEF("sai%d: state->dma_tx_driver_data.dma_buffer_phys=%lx\n",
                 state->bus_id,state->dma_tx_driver_data.dma_buffer_phys);
-        printlk(LK_DEBUG, "sai%d: state->dma_tx_driver_data.dma_buffer=%p\n",
+        LTRACEF("sai%d: state->dma_tx_driver_data.dma_buffer=%p\n",
                 state->bus_id,state->dma_tx_driver_data.dma_buffer);
-        printlk(LK_DEBUG, "sai%d: state->tx_period.size=%d\n",
+        LTRACEF("sai%d: state->tx_period.size=%d\n",
                 state->bus_id, state->tx_period.size);
-        printlk(LK_DEBUG, "sai%d: 1 om period for %d dma periods\n",
+        LTRACEF("sai%d: 1 om period for %d dma periods\n",
                 state->bus_id,
                 state->tx_period.size / state->dma_tx_driver_data.dma_period_size);
 
@@ -2542,34 +2557,34 @@ static status_t imx_sai_dma_setup(struct device *dev, bool is_rx)
             unsigned nr_period = state->tx_circ_buf_max_size / state->tx_period.size;
             state->tx_circ_buf_size = nr_period * state->tx_period.size;
             if (state->tx_circ_buf_size != cbuf_size(&state->tx_circ_buf)) {
-                printlk(LK_DEBUG, "sai%d: Adjusting circ buf size to %zu\n",
+                LTRACEF("sai%d: Adjusting circ buf size to %zu\n",
                     state->bus_id, state->tx_circ_buf_size);
                 imx_sai_tx_adjust_buffers(state,state->tx_circ_buf_size);
             }
 
             DEBUG_ASSERT(cbuf_size(&state->tx_circ_buf) == state->tx_circ_buf_size);
 
-            printlk(LK_DEBUG, "sai%d: %f dma buffer in circ buffer\n", state->bus_id,
+            LTRACEF("sai%d: %f dma buffer in circ buffer\n", state->bus_id,
                 ((float) cbuf_size(&state->tx_circ_buf)) / state->dma_tx_driver_data.dma_period_size);
 
             ASSERT((state->tx_circ_buf_size % state->dma_tx_driver_data.dma_period_size) == 0);
 
             size_t len_adv = state->dma_tx_driver_data.dma_period_size;
             len_adv *= state->tx_period.dma_period_prefill;
-            printlk(LK_DEBUG, "sai%d: Advance TX circ wr pointer (+%zu)\n",
+            LTRACEF("sai%d: Advance TX circ wr pointer (+%zu)\n",
                 state->bus_id, len_adv);
             cbuf_skip(&state->tx_circ_buf, true, len_adv);
             break;
         }
         case kSAI_DMA_Private_Buffer:
         default:
-            printlk(LK_DEBUG, "sai%d: zero-init dma private buffer\n",state->bus_id);
+            LTRACEF("sai%d: zero-init dma private buffer\n",state->bus_id);
             memset(state->dma_tx_driver_data.dma_buffer, SAI_DMA_PREFILL_PATTERN,
                         state->dma_tx_driver_data.dma_period_size
                             * state->dma_tx_driver_data.dma_nr_periods);
             break;
         }
-        printlk(LK_DEBUG, "sai%d: TX Init DMA period_elapsed [sw/hw] %llu/%u, fifo prefill: %d\n",
+        LTRACEF("sai%d: TX Init DMA period_elapsed [sw/hw] %llu/%u, fifo prefill: %d\n",
                         state->bus_id,
                         state->dma_tx_driver_data.dma_desc->period_elapsed,
                         state->tx_period.dma_period_prefill,
@@ -2607,7 +2622,7 @@ static status_t imx_sai_tx_setup(struct device *dev, sai_format_t *pfmt)
     struct imx_hw_state_s *hw_state = &state->tx_hw_state;
     ASSERT(!imx_is_hw_state(hw_state, kSAI_hw_Started));
 
-    printlk(LK_VERBOSE, "%s: SAI%d: entry\n", __PRETTY_FUNCTION__, state->bus_id);
+    LTRACEF("%s: SAI%d: entry\n", __PRETTY_FUNCTION__, state->bus_id);
 
     slots = (int)pfmt->num_slots;
 
@@ -2774,12 +2789,12 @@ static status_t imx_sai_tx_setup(struct device *dev, sai_format_t *pfmt)
               tx_format,
               state->mclk_tx_rate,
               tx_format->masterClockHz);
-    printlk(LK_VERBOSE, "sai%d: FIFO watermark: %d\n", state->bus_id, tx_handle->watermark);
+    LTRACEF("sai%d: FIFO watermark: %d\n", state->bus_id, tx_handle->watermark);
 
     /* adjust dataline mask */
     uint32_t fifo_num = (tx_format->audio_channel) / (tx_format->slot);
     uint32_t fifo_mask = (1 << fifo_num) - 1;
-    printlk(LK_VERBOSE, "sai%d: Setting TX FIFO mask to 0x%x\n", state->bus_id, fifo_mask);
+    LTRACEF("sai%d: Setting TX FIFO mask to 0x%x\n", state->bus_id, fifo_mask);
     SAI_TxSetChannelFIFOMask(base, fifo_mask);
 
     /* set FCOMB according to device tree */
@@ -2799,10 +2814,10 @@ static status_t imx_sai_tx_setup(struct device *dev, sai_format_t *pfmt)
     spin_unlock_irqrestore(&state->tx_lock, lock_state);
 #endif
 
-    printlk(LK_DEBUG, "Tx period: (%d frames)(%d Bytes)\n",
+    LTRACEF("Tx period: (%d frames)(%d Bytes)\n",
         pfmt->period_size, state->tx_period.size);
-    printlk(LK_DEBUG, "TX circular buffer size: %ld\n", state->tx_circ_buf_size);
-    printlk(LK_DEBUG, "SAI_Tx init Done: %d/%d (i2s/audio ch)"
+    LTRACEF("TX circular buffer size: %ld\n", state->tx_circ_buf_size);
+    LTRACEF("SAI_Tx init Done: %d/%d (i2s/audio ch)"
            ", %d (sample rate).\n",
            tx_format->channel,
            tx_format->audio_channel,
@@ -3274,7 +3289,7 @@ static status_t imx_sai_rx_setup(struct device *dev, sai_format_t *pfmt)
               rx_format,
               state->mclk_rx_rate,
               rx_format->masterClockHz);
-    printlk(LK_VERBOSE, "FIFO watermark: %d\n", rx_handle->watermark);
+    LTRACEF("FIFO watermark: %d\n", rx_handle->watermark);
 
     /* adjust dataline mask */
     uint32_t fifo_num = (rx_format->audio_channel) / (rx_format->slot);
@@ -3316,9 +3331,9 @@ static status_t imx_sai_rx_setup(struct device *dev, sai_format_t *pfmt)
     spin_unlock_irqrestore(&state->rx_lock, lock_state);
 #endif
 
-    printlk(LK_DEBUG, "Rx period size: %d\n", state->rx_period.size);
-    printlk(LK_DEBUG, "RX circular buffer size: %ld\n", state->rx_circ_buf_size);
-    printlk(LK_DEBUG, "SAI_Rx init Done: %d/%d (i2s/audio ch)"
+    LTRACEF("Rx period size: %d\n", state->rx_period.size);
+    LTRACEF("RX circular buffer size: %ld\n", state->rx_circ_buf_size);
+    LTRACEF("SAI_Rx init Done: %d/%d (i2s/audio ch)"
            ", %d (sample rate).\n",
            rx_format->channel,
            rx_format->audio_channel,
@@ -3823,7 +3838,9 @@ static status_t imx_sai_read(struct device *dev, void *buf, size_t len)
     spin_lock_irqsave(&state->rx_lock, lock_state);
     used = cbuf_space_used(&state->rx_circ_buf);
     if (len > used)
+    {
         handle->xfer_remaining = len - used;
+    }
     else
         handle->xfer_remaining = 0;
 
@@ -3846,16 +3863,22 @@ retry:
 #endif
     }
 
+    unsigned numCbufReads = 0;
+    used = cbuf_space_used(&state->rx_circ_buf);
+    LTRACEF("used: %lu\n", used);
     while (remaining) {
         read = cbuf_read(&state->rx_circ_buf, xfer, remaining, false);
+        numCbufReads++;
         remaining -= read;
         xfer += read;
 
         if (remaining)
+        {
             event_wait(&state->rx_wait);
+        }
 
         if (handle->xfer_remaining < 0) {
-            printlk(LK_NOTICE, "%s:%d: SAI%d: Abort (%ld)\n",
+            LTRACEF("%s:%d: SAI%d: Abort (%ld)\n",
                     __PRETTY_FUNCTION__, __LINE__, state->bus_id,
                     handle->xfer_remaining);
             break;
@@ -3922,7 +3945,56 @@ done:
 
     imx_sai_autodetect(buf, len);
 
+    if (numCbufReads > 1)
+    {
+        LTRACEF("took %u cbuf reads to get %lu bytes from cbuf at %p\n", 
+        numCbufReads, len, &state->rx_circ_buf);
+    }
     return ret;
+}
+
+static int imx_sai_read_nonblock(struct device *dev, void *buf, size_t max_len)
+{
+    size_t read, used;
+
+    struct imx_sai_state *state = dev->state;
+    ASSERT(state);
+
+    mutex_acquire(&state->rx_mutex);
+
+    spin_lock_saved_state_t lock_state;
+    spin_lock_irqsave(&state->rx_lock, lock_state);
+    used = cbuf_space_used(&state->rx_circ_buf);
+    read = 0;
+    if (used > 0)
+    {
+        read = cbuf_read(&state->rx_circ_buf, buf, max_len, false);
+    }
+
+    smp_mb();
+    spin_unlock_irqrestore(&state->rx_lock, lock_state);
+
+    mutex_release(&state->rx_mutex);
+    return read;
+}
+
+static size_t imx_sai_rx_data_available(struct device *dev)
+{
+    size_t used;
+
+    struct imx_sai_state *state = dev->state;
+    ASSERT(state);
+
+    mutex_acquire(&state->rx_mutex);
+
+    spin_lock_saved_state_t lock_state;
+    spin_lock_irqsave(&state->rx_lock, lock_state);
+    smp_mb();
+    used = cbuf_space_used(&state->rx_circ_buf);
+
+    spin_unlock_irqrestore (&state->rx_lock, lock_state);
+    mutex_release (&state->rx_mutex);
+    return used;
 }
 
 static struct device_class sai_device_class = {
@@ -4073,6 +4145,8 @@ static struct sai_ops the_ops = {
     .rx_get_cnt = imx_sai_rx_get_counters,
     .rx_set_callback = imx_sai_rx_set_callback,
     .read = imx_sai_read,
+    .read_nonblock = imx_sai_read_nonblock,
+    .rx_get_data_available = imx_sai_rx_data_available
 };
 
 DRIVER_EXPORT_WITH_LVL(sai, &the_ops.std, DRIVER_INIT_PLATFORM);
