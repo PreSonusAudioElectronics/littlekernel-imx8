@@ -199,6 +199,7 @@
     tx,bcp = < 1 >;
     /* mclk source selection (0: bus clock, 1: MCLK1, 2: MCLK2, 3: MCLK3 */
     tx,mclk-select = < 1 >;
+    rx,mclk-select = < 1 >;
     /* mclk set as an output */
     mclk,is-output = < 1 >;
 
@@ -225,8 +226,8 @@
     rx,bcp = < 0 >;
     tx,bcp = < 0 >;
     /* mclk source selection (0: bus clock, 1: MCLK1, 2: MCLK2, 3: MCLK3 */
-    rx,mclk-select = < 2 >;
-    tx,mclk-select = < 2 >;
+    rx,mclk-select = < 1 >;
+    tx,mclk-select = < 1 >;
 
     disable-dma-tx;
     disable-dma-rx;
