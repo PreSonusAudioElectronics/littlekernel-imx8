@@ -273,6 +273,16 @@ struct imx_sai_state {
     uint32_t flush_silence_periods;
 };
 
+#define SAI_ASSERT(x) \
+    if (!(x)) { \
+        printf ("SAI_ASSERTION FAILURE: %s, %s:%d\n", #x, __FILE__, __LINE__); \
+        if ( get_current_thread() == NULL ) \
+        { while (true) {} } \
+        else { \
+            thread_sleep(50); \
+        } \
+    }
+
 static status_t imx_sai_set_timestamp(struct device *dev,
                                         struct sai_ioc_cmd_timestamp *ts);
 
@@ -583,7 +593,7 @@ static bool imx_sai_pop_from_tx_circ_buffer(struct imx_sai_state *state,
             reschedule = true;
             imx_sai_notify_silence(state, inject_len);
 #else
-            ASSERT(read == xfer_len);
+            SAI_ASSERT(read == xfer_len);
 #endif
         }
     } else {
