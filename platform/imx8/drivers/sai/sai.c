@@ -651,10 +651,11 @@ static bool imx_sai_push_to_rx_circ_buffer(struct imx_sai_state *state,
         }
     }
 
-    if (state->rx_cb && (used >= state->rx_period.size) ) 
+    // if (state->rx_cb && (used >= state->rx_period.size) ) 
+    if (state->rx_cb && (used >= 0) ) 
     {
         smp_mb();
-        state->rx_cb(SAI_EVENT_DATA_RDY, &handle->xfer_remaining, state->rx_cb_cookie);
+        state->rx_cb(SAI_EVENT_DATA_RDY, &handle->xfer_remaining, &used);
     }
     return reschedule;
 }
