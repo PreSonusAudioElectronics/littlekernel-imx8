@@ -15,7 +15,8 @@ MODULES += \
 		dev/ivshmem/services/serial \
 		dev/dac/wm8524 \
 		dev/pinctrl \
-		dev/adc/ak55xx
+		dev/adc/ak55xx \
+		dev/pca6416 \
 
 GLOBAL_OPTFLAGS += -Og
 GLOBAL_COMPILEFLAGS += -g3
