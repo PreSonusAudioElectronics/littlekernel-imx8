@@ -306,6 +306,8 @@ typedef enum _clock_ip_name
 
     kCLOCK_TempSensor = CCM_TUPLE(98U, 0xFFFF), /*!< TempSensor Clock Gate.*/
 
+    kCLOCK_EnetTimer = CCM_TUPLE(10U, 84U),  /*!< Ethernet Timer Clock */
+
 } clock_ip_name_t;
 
 /*! @brief ccm root name used to get clock frequency. */
@@ -359,6 +361,8 @@ typedef uintptr_t clock_root_control_t;
 #define kCLOCK_RootWdog ((uintptr_t)(&(CCM)->ROOT[114].TARGET_ROOT)) /*!< WDOG Clock control name.*/
 
 #define kCLOCK_RootPdm ((uintptr_t)(&(CCM)->ROOT[132].TARGET_ROOT)) /*!< PDM Clock control name.*/
+
+#define kCLOCK_RootEnetTimer ((uintptr_t)(&(CCM)->ROOT[64].TARGET_ROOT)) /*!< Enet Timer control name.*/
 
 static inline uintptr_t get_kCLOCK_Root_by_index(unsigned idx)
 {
@@ -548,6 +552,19 @@ typedef enum _clock_rootmux_noc_clk_sel
     kCLOCK_NocRootmuxAudioPll2   = 7U, /*!< NOC Clock from AUDIO PLL2.*/
 
 } clock_rootmux_noc_clk_sel_t;
+
+/*! @brief Root clock select enumeration for Ethernet Timer . */
+typedef enum _clock_rootmux_enet_timer_clk_sel
+{
+    kCLOCK_EnetTimerRootmuxOsc23M    = 0U,
+    kCLOCK_EnetTimerRootmuxPll2Div10 = 1U,
+    kCLOCK_EnetTimerRootmuxAudioPll1 = 2U,
+    kCLOCK_EnetTimerRootmuxVideoPll  = 7U,
+    kCLOCK_EnetTimerRootmuxExtClk1   = 3U,
+    kCLOCK_EnetTimerRootmuxExtClk2   = 4U,
+    kCLOCK_EnetTimerRootmuxExtClk3   = 5U,
+    kCLOCK_EnetTimerRootmuxExtClk4   = 6U,
+} clock_rootmux_enet_timer_clk_sel;
 
 /*! @brief CCM PLL gate control. */
 typedef uintptr_t clock_pll_gate_t;

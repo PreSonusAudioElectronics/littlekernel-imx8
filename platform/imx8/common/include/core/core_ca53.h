@@ -833,6 +833,8 @@ __STATIC_INLINE void GIC_CPUInterfaceInit(void)
 */
 __STATIC_INLINE void GIC_Enable(int mainCore)
 {
+  (void)mainCore;
+
   uint32_t core = MPIDR_GetCoreID();
 
   if (core == 0) {
