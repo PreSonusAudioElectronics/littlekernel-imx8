@@ -68,18 +68,34 @@
         status = "disabled";
     };
 
-    tty_lk_transport {
+    lk_transport_server {
         compatible = "ivshm_serial";
-        id_str = "lk_transport";
+        id_str = "lk_transport_server";
         id = <0x400>;
         size = <0x200>;
         status = "ok";
     };
 
-    tty_lk_dsp {
+    lk_dsp {
         compatible = "ivshm_serial";
         id_str = "lk_dsp";
         id = <0x401>;
+        size = <0x200>;
+        status = "ok";
+    };
+
+    lk_transport_client {
+        compatible = "ivshm_serial";
+        id_str = "lk_transport_client";
+        id = <0x402>;
+        size = <0x200>;
+        status = "ok";
+    };
+
+    lk_ethernet {
+        compatible = "ivshm_serial";
+        id_str = "lk_ethernet";
+        id = <0x403>;
         size = <0x200>;
         status = "ok";
     };
@@ -89,6 +105,15 @@
         bus-id = < 1 >;
         mute-gpio = <&gpio5 21 0>;
         status = "ok";
+    };
+
+    // for debug control of gpio pins
+    pin_controller {
+        compatible = "pin_controller";
+        bus-id = < 1 >;
+        status = "ok";
+        dbg-gpio1 = <&gpio5 8 0>;
+        dbg-gpio2 = <&gpio5 9 0>;
     };
 };
 
@@ -182,14 +207,16 @@
     tx,bcp = < 1 >;
     /* mclk source selection (0: bus clock, 1: MCLK1, 2: MCLK2, 3: MCLK3 */
     tx,mclk-select = < 1 >;
+    rx,mclk-select = < 1 >;
     /* mclk set as an output */
     mclk,is-output = < 1 >;
 
-    disable-dma-tx;
+    /* set tx dma to zero-copy un-cached mode */
+    tx,dma-mode = < 1 >;
 };
 
 &sai5 {
-    status = "disabled";
+    status = "ok";
 
     pinctrl-names = "default";
     pinctrl-0 = <
@@ -204,8 +231,8 @@
 
     /* bit clock polarity (0: active high, 1 active low,
      * other keep default according to i2s format) */
-    rx,bcp = < 1 >;
-    tx,bcp = < 1 >;
+    rx,bcp = < 0 >;
+    tx,bcp = < 0 >;
     /* mclk source selection (0: bus clock, 1: MCLK1, 2: MCLK2, 3: MCLK3 */
     rx,mclk-select = < 1 >;
     tx,mclk-select = < 1 >;
