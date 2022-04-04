@@ -39,6 +39,7 @@
 
 #include "delay.h"
 
+#define I2C_DEBUG 0
 
 /*
  *
@@ -268,7 +269,7 @@ struct imx_i2c_state {
     struct list_node node;
 };
 
-
+#if I2C_DEBUG
 #define I2C_TRACE(state, msg) \
         printlk(LK_NOTICE, "%s:%d: [%d:%d] - %s : %s\n", \
                         __PRETTY_FUNCTION__, \
@@ -277,6 +278,9 @@ struct imx_i2c_state {
                         state->xfer.address, \
                         get_fsm_state_string(state->fsm_state), \
                         msg)
+#else
+#define I2C_TRACE(state, msg)
+#endif
 
 static inline void imx_i2c_set_fsm_state(struct imx_i2c_state *state,
         enum i2c_fsm_state fsm_state,
@@ -676,7 +680,7 @@ retry:
 
 
 
-    DEBUG_ASSERT(state->fsm_state == i2c_fsm_state_done);
+    //DEBUG_ASSERT(state->fsm_state == i2c_fsm_state_done);
     /*
      * TODO: FIXME: Shall we check the bus is free ?
      *  imx_i2c_bus_is_free()
