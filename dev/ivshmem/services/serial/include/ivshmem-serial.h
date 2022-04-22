@@ -1,3 +1,12 @@
+/*!
+ * \file ivshmem-serial.h
+ * \author D. Anderson
+ * \brief A "serial" (in retrospect, poorly named) wrapper for simple ivshmem communication
+ * with hypervisor host environment
+ * 
+ * Copyright (c) 2022 Presonus Audio Electronics
+ * 
+ */
 
 #ifndef __IVSHMEM_SERIAL_H
 #define __IVSHMEM_SERIAL_H
