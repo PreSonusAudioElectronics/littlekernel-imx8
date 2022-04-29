@@ -29,7 +29,7 @@ GLOBAL_DEFINES += \
 
 # IMX_SAI_PERMISSIVE=1 \
 # global defines for debugging:
-# AF_LK_LOGLEVEL=6
+AF_LK_LOGLEVEL=7
 
 #EXTRA_OBJS := libapp.a
 

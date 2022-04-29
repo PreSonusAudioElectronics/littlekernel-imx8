@@ -42,7 +42,9 @@
 #include "err.h"
 #include <string.h>
 #include <lib/appargs.h>
+#include <trace.h>
 
+#define LOCAL_TRACE 1
 
 struct gpio_irq_state {
 #define MAX_GPIO_IRQ_NAME 8
@@ -72,289 +74,7 @@ struct imx_gpio_host {
     char request_name[IMX_GPIO_MAX_PER_BANK][IMX_GPIO_NAMES_LENGTH];
 };
 
-#if 0
-static inline struct gpio_irq_state * get_irq_state(struct gpio_state * state, unsigned id)
-{
-    DEBUG_ASSERT(id < state->config->max_banks);
 
-    return &state->irq_state[id];
-}
-
-static enum handler_return imx_gpio_isr(void *args)
-{
-    struct gpio_irq_state * irq_state = args;
-
-
-    spin_lock_saved_state_t state;
-
-    spin_lock(&irq_state->lock);
-    /* Mask the interrupts:
-     * I mask only the enabled one - but might be wiser to clear everything */
-    GPIO_DisableInterrupts(irq_state->base, irq_state->isr_bitmap);
-
-    spin_unlock(&irq_state->lock);
-
-    /* Wake the bottom half */
-    event_signal(&irq_state->event, false);
-
-    return  INT_RESCHEDULE;
-}
-
-static int imx_gpio_thread(void *args)
-{
-    struct gpio_irq_state * irq_state = args;
-    bool thread_running = true;
-    unsigned pending;
-    unsigned pin;
-
-    while(thread_running) {
-        event_wait(&irq_state->event);
-        /* Read pending interrupts */
-        pending = GPIO_GetPinsInterruptFlags(irq_state->base);
-        /* Iterate over the pending interrupts and call isr callbacks */
-        for (pin  = 0; pin < MAX_GPIO_IRQ_PER_BANK; pin++) {
-            if (pending & (1U << pin)) {
-                if (irq_state->isr[pin])
-                    irq_state->isr[pin](irq_state->args[pin]);
-                GPIO_ClearPinsInterruptFlags(irq_state->base, (1U << pin));
-            }
-        }
-        event_unsignal(&irq_state->event);
-        GPIO_EnableInterrupts(irq_state->base, irq_state->isr_bitmap);
-    };
-
-    return 0;
-}
-
-static int gpio_init_irq(struct gpio_state * state, unsigned id)
-{
-
-    DEBUG_ASSERT(id < MAX_GPIO_BANKS);
-    DEBUG_ASSERT(state->config->bank_mask & (1UL << id));
-    DEBUG_ASSERT(state->config->irq[id]  > 32);
-
-    struct gpio_irq_state *irq_state = get_irq_state(state, id);
-
-    /* Clear everything ... */
-    memset(irq_state, 0, sizeof(struct gpio_irq_state));
-
-    snprintf(irq_state->name, MAX_GPIO_IRQ_NAME, "GPIO %d", id);
-
-    irq_state->state = state;
-    irq_state->id = id;
-    irq_state->irq = state->config->irq[id];
-    irq_state->base = (GPIO_Type *) state->config->virt_io[id];
-
-    event_init(&irq_state->event, false, 0);
-    spin_lock_init(&irq_state->lock);
-    mutex_init(&irq_state->mutex);
-
-    irq_state->thread = thread_create(
-                                    irq_state->name,
-                                    imx_gpio_thread,
-                                    irq_state,
-                                    HIGH_PRIORITY,
-                                    DEFAULT_STACK_SIZE);
-
-    assert(irq_state->thread);
-
-    register_int_handler(state->config->irq[id], imx_gpio_isr, irq_state);
-
-    return 0;
-}
-
-static int _gpio_config(unsigned nr, unsigned flags)
-{
-    gpio_pin_config_t config = {kGPIO_DigitalInput, 0, kGPIO_NoIntmode};
-    unsigned bank = extract_bank(nr);
-    unsigned bit = extract_bit(nr);
-
-    struct gpio_irq_state *irq_state = get_irq_state(imx_gpio_state, bank);
-
-    /* Configure the gpio in input or output */
-    if ((flags & (GPIO_INPUT | GPIO_OUTPUT))) {
-        /* Either input or output */
-        DEBUG_ASSERT(flags != (GPIO_INPUT | GPIO_OUTPUT));
-
-        if (flags & GPIO_OUTPUT) {
-            config.direction = kGPIO_DigitalOutput;
-            config.outputLogic = extract_default(nr);
-        }
-
-        GPIO_PinInit(irq_state->base, bit, &config);
-
-        return 0;
-    }
-
-    /* So this is an interrupt ... */
-
-    /* Either edge or level ... */
-    DEBUG_ASSERT(flags & (GPIO_EDGE | GPIO_LEVEL));
-
-    /* ... but not both ... */
-    DEBUG_ASSERT(flags != (GPIO_EDGE | GPIO_LEVEL));
-
-    /* Is it a edge sensitive interrupt */
-    if (flags & GPIO_EDGE) {
-        DEBUG_ASSERT(flags & (GPIO_RISING | GPIO_FALLING));
-        if (flags & GPIO_RISING)
-            config.interruptMode = kGPIO_IntRisingEdge;
-        else if (flags & GPIO_FALLING)
-                config.interruptMode = kGPIO_IntFallingEdge;
-            else
-                config.interruptMode = kGPIO_IntRisingOrFallingEdge;
-    }
-
-    /* Is it a level sensitive interrupt */
-    if (flags & GPIO_LEVEL) {
-        DEBUG_ASSERT(flags & (GPIO_HIGH | GPIO_LOW));
-        DEBUG_ASSERT(flags != (GPIO_HIGH | GPIO_LOW));
-        if (flags & GPIO_HIGH)
-            config.interruptMode = kGPIO_IntHighLevel;
-        else
-            config.interruptMode = kGPIO_IntLowLevel;
-    }
-
-    GPIO_PinInit(irq_state->base, bit, &config);
-
-    return 0;
-}
-
-int gpio_config(unsigned nr, unsigned flags)
-{
-    int ret;
-    unsigned bank = extract_bank(nr);
-    struct gpio_irq_state *irq_state = get_irq_state(imx_gpio_state, bank);
-
-    spin_lock(&irq_state->lock);
-
-    ret = _gpio_config(nr, flags);
-
-    spin_unlock(&irq_state->lock);
-
-    return 0;
-}
-
-void imx_gpio_config(unsigned gpio)
-{
-    gpio_config(gpio & 0xFFFF, GPIO_GET_FLAGS(gpio));
-}
-
-void gpio_set(unsigned nr, unsigned on)
-{
-    unsigned bank = extract_bank(nr);
-    unsigned bit = extract_bit(nr);
-    struct gpio_irq_state *irq_state = get_irq_state(imx_gpio_state, bank);
-
-    spin_lock(&irq_state->lock);
-
-    GPIO_PinWrite(irq_state->base, bit, on);
-
-    spin_unlock(&irq_state->lock);
-}
-
-int gpio_get(unsigned nr)
-{
-
-    unsigned bank = extract_bank(nr);
-    unsigned pin = extract_bit(nr);
-    struct gpio_irq_state *irq_state = get_irq_state(imx_gpio_state, bank);
-
-    /* FIXME: Check a spin lock is not required for read */
-
-    return (int) GPIO_PinRead(irq_state->base, pin);
-}
-
-void register_gpio_int_handler(unsigned gpio, int_handler handler, void *args)
-{
-    unsigned bank = extract_bank(gpio);
-    unsigned pin = extract_bit(gpio);
-
-    struct gpio_irq_state * irq_state = get_irq_state(imx_gpio_state, bank);
-
-    spin_lock_saved_state_t state;
-
-    spin_lock_irqsave(&irq_state->lock, state);
-
-    /* Init the GPIO mode */
-    _gpio_config(gpio, GPIO_GET_FLAGS(gpio));
-
-    irq_state->isr[bank] = handler;
-    irq_state->args[bank] = args;
-    irq_state->isr_bitmap |= (1U << pin);
-
-    GPIO_ClearPinsInterruptFlags(irq_state->base, 1U << pin);
-    GPIO_EnableInterrupts(irq_state->base, 1U << pin);
-
-    spin_unlock_irqrestore(&irq_state->lock, state);
-
-    spin_lock_irqsave(&imx_gpio_state->lock, state);
-
-    if (!(imx_gpio_state->isr_bitmap & (1U << bank)))
-        unmask_interrupt(irq_state->irq);
-
-    imx_gpio_state->isr_bitmap |= (1U << bank);
-
-    spin_unlock_irqrestore(&imx_gpio_state->lock, state);
-}
-
-void unregister_gpio_int_handler(unsigned gpio)
-{
-
-    unsigned bank = extract_bank(gpio);
-    unsigned pin = extract_bit(gpio);
-
-    struct gpio_irq_state * irq_state = get_irq_state(imx_gpio_state, bank);
-
-    spin_lock_saved_state_t state;
-
-    spin_lock_irqsave(&imx_gpio_state->lock, state);
-
-    GPIO_ClearPinsInterruptFlags(irq_state->base, 1U << pin);
-    GPIO_DisableInterrupts(irq_state->base, 1U << pin);
-
-    irq_state->isr[bank] = NULL;
-    irq_state->args[bank] = NULL;
-    irq_state->isr_bitmap &= ~(1U << pin);
-
-    spin_unlock(&irq_state->lock);
-
-
-    spin_lock_irqsave(&imx_gpio_state->lock, state);
-
-    if (irq_state->isr_bitmap == 0) {
-        imx_gpio_state->isr_bitmap &= ~(1U << bank);
-        mask_interrupt(irq_state->irq);
-    }
-
-    spin_unlock_irqrestore(&imx_gpio_state->lock, state);
-
-}
-
-int gpio_to_irq(unsigned nr)
-{
-    unsigned bank = extract_bank(nr);
-    unsigned pin = extract_bit(nr);
-
-    struct gpio_irq_state * irq_state = get_irq_state(imx_gpio_state, bank);
-    return 0;
-}
-
-int gpio_init(struct imx_gpio_config *config)
-{
-    int i;
-
-    spin_lock_init(&imx_gpio_state->lock);
-    imx_gpio_state->config = config;
-    imx_gpio_state->isr_bitmap = 0;
-
-    for ( i = 0; i < config->max_banks; i++)
-        if (config->bank_mask & (1U << i))
-            gpio_init_irq(imx_gpio_state, i);
-
-    return 0;
-}
-#endif
 static status_t imx_gpio_init(struct device *dev)
 {
     printlk(LK_NOTICE, "%s: entry\n", __PRETTY_FUNCTION__);
@@ -370,10 +90,12 @@ static status_t imx_gpio_init(struct device *dev)
         ngpios = IMX_GPIO_MAX_PER_BANK;
     }
 
+    LTRACEF ("adding gpio controller, name: %s\n", dev->name);
+    
     struct gpio_controller *ctrl = gpio_controller_add(
                                 dev, ngpios, sizeof(struct imx_gpio_host));
     ASSERT(ctrl);
-    printlk(LK_INFO, "%s:%d: Gpio %s: %d pins, base %d\n", __PRETTY_FUNCTION__,
+    printlk(LK_NOTICE, "%s:%d: Gpio %s: %d pins, base %d\n", __PRETTY_FUNCTION__,
             __LINE__, dev->name, ctrl->count, ctrl->base);
 
     dev->state = ctrl;
@@ -403,6 +125,9 @@ static int imx_gpio_request(struct device *dev,
     ASSERT(gpio_host);
     const struct device_config_data *config = dev->config;
     ASSERT(config);
+
+    LTRACEF ("dev: %p, pin: %u, label: %s\n", 
+        dev, pin, label);
 
     if (strlen(gpio_host->request_name[pin]) != 0) {
         printlk(LK_ERR, "%s:%d: Pin %d already requested as %s\n",
@@ -526,6 +251,29 @@ static int imx_gpio_set_open_drain(struct device *dev, unsigned pin, int value)
     return 0;
 }
 
+static int imx_gpio_get_io_base (struct device *dev, void **io_base)
+{
+    if (!dev || !io_base)
+        return ERR_INVALID_ARGS;
+    
+    struct gpio_controller *ctrl = dev->state;
+    if (!ctrl)
+        return ERR_INVALID_ARGS;
+    
+    struct imx_gpio_host *gpio_host = gpio_ctrl_to_host(ctrl);
+    if (!gpio_host)
+        return ERR_INVALID_ARGS;
+
+    void *loc_io_base = gpio_host->io_base;
+
+    if (!loc_io_base)
+        return ERR_INVALID_ARGS;
+
+    *io_base = loc_io_base;
+
+    return 0;
+}
+
 static struct device_class gpio_device_class = {
     .name = "gpio",
 };
@@ -543,6 +291,7 @@ struct gpio_ops imx_gpio_ops = {
     .set_value = imx_gpio_set_value,
     .get_open_drain = imx_gpio_get_open_drain,
     .set_open_drain = imx_gpio_set_open_drain,
+    .get_io_base = imx_gpio_get_io_base
 };
 
 DRIVER_EXPORT_WITH_CFG_LVL(gpio, &imx_gpio_ops.std, DRIVER_INIT_CORE, sizeof(struct gpio_irq_state));
