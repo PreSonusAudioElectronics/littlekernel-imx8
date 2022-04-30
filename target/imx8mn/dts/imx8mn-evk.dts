@@ -98,15 +98,6 @@
         mute-gpio = <&gpio5 21 0>;
         status = "ok";
     };
-
-    // for debug control of gpio pins
-    pin_controller {
-        compatible = "pin_controller";
-        bus-id = < 1 >;
-        status = "ok";
-        dbg-gpio1 = <&gpio5 8 0>;
-        dbg-gpio2 = <&gpio5 9 0>;
-    };
 };
 
 &gpr {
