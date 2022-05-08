@@ -15,4 +15,13 @@ GLOBAL_LDFLAGS += -L../build/ \
 EXTRA_LINKER_DEPS += ../build/libapp.a \
                      ../build/lib/pep/libpep.a \
 
+$(info )
+$(info PAE PROJECT LOCAL_DIR: $(LOCAL_DIR))
+GOTHAM_DIR := $(LOCAL_DIR)../../../../../../../..
+PEP_PORT_DIR := $(abspath $(GOTHAM_DIR)/lib/pep/port/lk)
+$(info PEP_PORT_DIR: $(PEP_PORT_DIR))
+$(info )
+
+GLOBAL_INCLUDES += $(PEP_PORT_DIR)
+
 include make/module.mk
