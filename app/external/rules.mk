@@ -15,12 +15,12 @@ GLOBAL_LDFLAGS += -L../build/ \
 EXTRA_LINKER_DEPS += ../build/libapp.a \
                      ../build/lib/pep/libpep.a \
 
-$(info )
-$(info PAE PROJECT LOCAL_DIR: $(LOCAL_DIR))
+# Make Pep LK port dir visible to LK build
 GOTHAM_DIR := $(LOCAL_DIR)../../../../../../../..
 PEP_PORT_DIR := $(abspath $(GOTHAM_DIR)/lib/pep/port/lk)
-$(info PEP_PORT_DIR: $(PEP_PORT_DIR))
-$(info )
+
+# Make LK use the pep print mutex once the application has started
+GLOBAL_DEFINES += LK_USE_PRINT_LOCK
 
 GLOBAL_INCLUDES += $(PEP_PORT_DIR)
 
