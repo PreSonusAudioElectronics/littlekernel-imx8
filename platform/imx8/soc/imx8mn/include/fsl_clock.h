@@ -362,7 +362,9 @@ typedef uintptr_t clock_root_control_t;
 
 #define kCLOCK_RootPdm ((uintptr_t)(&(CCM)->ROOT[132].TARGET_ROOT)) /*!< PDM Clock control name.*/
 
-#define kCLOCK_RootEnetTimer ((uintptr_t)(&(CCM)->ROOT[64].TARGET_ROOT)) /*!< Enet Timer control name.*/
+#define kCLOCK_RootEnetRefClk ((uintptr_t)(&(CCM)->ROOT[83].TARGET_ROOT)) /*!< Enet Ref Clock control name.*/
+#define kCLOCK_RootEnetTimer ((uintptr_t)(&(CCM)->ROOT[84].TARGET_ROOT)) /*!< Enet Timer control name.*/
+#define kCLOCK_RootEnetAxi ((uintptr_t)(&(CCM)->ROOT[17].TARGET_ROOT)) /*!< Enet AXI control name.*/
 
 static inline uintptr_t get_kCLOCK_Root_by_index(unsigned idx)
 {
