@@ -6,18 +6,22 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/app_external.c \
     $(LOCAL_DIR)/cxa.cpp \
 
+# Make Pep LK port dir visible to LK build
+GOTHAM_DIR := $(LOCAL_DIR)../../../../..
+PEP_PORT_DIR := $(abspath $(GOTHAM_DIR)/lib/pep/port/lk)
+
+APP_BUILD_DIR := $(abspath $(GOTHAM_DIR)/../build/)
+PEP_BUILD_DIR := $(abspath $(APP_BUILD_DIR)/lib/pep/)
+
 # Guide to external libraries
 EXTRA_LINK_LIBS += app pep
-GLOBAL_LDFLAGS += -L../build/ \
-                  -L../build/lib/pep \
+GLOBAL_LDFLAGS += -L$(APP_BUILD_DIR) \
+                  -L$(PEP_BUILD_DIR) \
 
 # Set dependencies on the library outputs
-EXTRA_LINKER_DEPS += ../build/libapp.a \
-                     ../build/lib/pep/libpep.a \
+EXTRA_LINKER_DEPS += libapp.a \
+                     libpep.a \
 
-# Make Pep LK port dir visible to LK build
-GOTHAM_DIR := $(LOCAL_DIR)../../../../../../../..
-PEP_PORT_DIR := $(abspath $(GOTHAM_DIR)/lib/pep/port/lk)
 
 # Make LK use the pep print mutex once the application has started
 GLOBAL_DEFINES += LK_USE_PRINT_LOCK
