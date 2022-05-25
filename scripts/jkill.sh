@@ -1,5 +1,8 @@
 #! /bin/bash
 
+echo 'Shutdown virtual ethernet adapter'
+rmmod virtual_eth_adapter
+
 echo 'Shutdown lk cell'
 jailhouse cell shutdown lk
 

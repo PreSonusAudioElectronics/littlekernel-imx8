@@ -1,3 +1,12 @@
+/*!
+ * \file ivshmem-serial.h
+ * \author D. Anderson
+ * \brief A "serial" (in retrospect, poorly named) wrapper for simple ivshmem communication
+ * with hypervisor host environment
+ * 
+ * Copyright (c) 2022 Presonus Audio Electronics
+ * 
+ */
 
 #ifndef __IVSHMEM_SERIAL_H
 #define __IVSHMEM_SERIAL_H
@@ -76,6 +85,26 @@ int ivshm_serial_putchar(unsigned id, char c);
  * \return int number of bytes actually written, or error code
  */
 int ivshm_serial_getchars_noblock(unsigned id, char *buf, uint16_t buflen);
+
+/*!
+ * \brief Send data over the ivshmem connection
+ * DO NOT CALL FROM INTERRUPT
+ * 
+ * \param id endpoint id to send to
+ * \param buf buffer holding data to send
+ * \param len size of data to send
+ * \return int bytes send (positive) or error code (negative)
+ */
+int ivshm_serial_send(unsigned id, char *buf, unsigned len);
+
+/*!
+ * \brief Find out how much data is waiting in the ivshmem
+ * ring buffer to be read out
+ * 
+ * \param id endpoint id
+ * \return int num of bytes ready (positive) or error (negative)
+ */
+int ivshm_serial_get_n_pending_rx (unsigned id);
 
 
 void ivshm_acquire_lock(void);

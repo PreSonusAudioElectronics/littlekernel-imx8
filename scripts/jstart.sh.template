@@ -23,3 +23,8 @@ jailhouse cell load lk ${DTB} -a ${LK_START_ADDRESS} ${LK_BIN} -a ${LK_ENTRY_ADD
 
 echo 'Starting lk cell'
 jailhouse cell start lk
+
+sleep .15
+
+echo 'Starting virtual ethernet adapter'
+modprobe virtual_eth_adapter

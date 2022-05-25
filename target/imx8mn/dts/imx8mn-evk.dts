@@ -88,7 +88,15 @@
         compatible = "ivshm_serial";
         id_str = "lk_transport_client";
         id = <0x402>;
-        size = <0x1000>;
+        size = <0x200>;
+        status = "ok";
+    };
+
+    lk_ethernet {
+        compatible = "ivshm_serial";
+        id_str = "lk_ethernet";
+        id = <0x403>;
+        size = <0x200>;
         status = "ok";
     };
 
