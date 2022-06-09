@@ -181,6 +181,7 @@
     status = "ok";
 
     disable-dma-rx;
+    disable-dma-tx;
     pinctrl-names = "default";
     pinctrl-0 = <
         IOMUXC_SAI3_MCLK_SAI3_MCLK      0   0x8A
