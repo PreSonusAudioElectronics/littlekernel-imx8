@@ -652,7 +652,7 @@ static bool imx_sai_push_to_rx_circ_buffer(struct imx_sai_state *state,
     }
 
     // if (state->rx_cb && (used >= state->rx_period.size) ) 
-    if (state->rx_cb && (used >= 0) ) 
+    if (state->rx_cb && (used > 0) ) 
     {
         smp_mb();
         state->rx_cb(SAI_EVENT_DATA_RDY, &handle->xfer_remaining, &used);
@@ -1000,6 +1000,10 @@ static unsigned imx_sai_set_mclk(struct imx_sai_state *state, unsigned rate,
                 __PRETTY_FUNCTION__, __LINE__, *pll_k_value);
     }
 
+    // state->device->name
+    TRACEF ("Setting mck for busId: %u, mclk config name: %s, mclk rate: %u\n",
+        state->bus_id, mclk_configs_names[mclk_cfg], *mclk_rate_ptr);
+
     if ((is_dummy == false) && (state->clock_dev && mclk_configs_names[mclk_cfg]))
         ret = clock_audio_set_sai_mclk_config(state->clock_dev, state->bus_id,
                                               mclk_configs_names[mclk_cfg],
@@ -1009,6 +1013,9 @@ static unsigned imx_sai_set_mclk(struct imx_sai_state *state, unsigned rate,
     if (clk && ret) {
         printlk(LK_NOTICE, "%s:%d: SAI%d: Using direct access to root clock mux as fallback\n",
                 __PRETTY_FUNCTION__, __LINE__, state->bus_id);
+        printlk(LK_NOTICE, "state->clock_dev is now: %p\n", state->clock_dev);
+        printf ("Dumping fallback clock configuration:\n");
+        print_dev_cfg_clk (clk);
         devcfg_set_clock(clk);
         *mclk_rate_ptr = clk->rate;
     }
@@ -1019,7 +1026,7 @@ static unsigned imx_sai_set_mclk(struct imx_sai_state *state, unsigned rate,
     mclk *= 1000;
     *mclk_rate_ptr = (unsigned) mclk;
 
-    printlk(LK_INFO, "SAI%d: Mode %d: Switching to %s mclk rate %d - harmonic of %d\n",
+    printlk(LK_NOTICE, "SAI%d: Mode %d: Switching to %s mclk rate %d - harmonic of %d\n",
            state->bus_id, state->mclk_as_output, is_tx ? "tx" : "rx",
            *mclk_rate_ptr, rate);
 
@@ -1397,7 +1404,10 @@ static status_t imx_sai_init(struct device *dev)
     state->is_dummy_rx = state->is_dummy_tx = false;
 
     /* Clock device */
+    printlk(LK_NOTICE, "acquired clock device handle at %p\n", dev);
     state->clock_dev = of_device_lookup_device(dev, "clock_audio");
+    printlk(LK_NOTICE, "state->clock_dev is now: %p\n", state->clock_dev);
+    printlk(LK_NOTICE, "state @%p holds clock_dev\n", state);
 
     /* Look for chained SAI devices */
     state->rx_sai_chained_dev = of_device_lookup_device(dev, "rx,sai_chained");
@@ -1423,6 +1433,8 @@ static status_t imx_sai_init(struct device *dev)
     ASSERT(NULL != state->clk_tx[SAI_MCLK_CONFIG_48K]);
     ASSERT(NULL != state->clk_tx[SAI_MCLK_CONFIG_44K]);
     ASSERT(NULL != state->clk_tx[SAI_MCLK_CONFIG_32K]);
+
+    print_dev_cfg_clk (state->clk_tx[SAI_MCLK_CONFIG_48K]);
 
     /* Get rx mclk configs */
     ret = of_device_get_strings(dev, "mclk-rx-config-names", state->mclk_rx_config, SAI_MCLK_CONFIG);
