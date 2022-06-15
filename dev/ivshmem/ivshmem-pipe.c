@@ -775,6 +775,9 @@ static int ivshm_pipe_thread(void *arg)
     spin_lock_saved_state_t irq_state;
     int ret;
 
+    state_change = false;
+    data_available = false;
+
     printlk(LK_NOTICE, "%s: entry\n", __PRETTY_FUNCTION__);
 
 #ifdef LK

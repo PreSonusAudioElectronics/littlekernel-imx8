@@ -1766,6 +1766,89 @@ static status_t imx_sai_init(struct device *dev)
     return ret;
 }
 
+static status_t imx_sai_shutdown(struct device *dev)
+{
+    /*!
+     * \brief Stop activity of this driver so another driver can take over
+     * - close tx and rx
+     * - shutdown any threads
+     * - stop dma
+     * - unregister interrupt handlers
+     * 
+     */
+
+    status_t ret = 0;
+    
+    struct imx_sai_state *state = dev->state;
+    ASSERT(state);
+
+    const struct device_config_data *config = dev->config;
+
+    struct device_cfg_irq *irq =
+                    device_config_get_irq_by_name(config, "core");
+    ASSERT (irq);
+    
+    struct sai_ops *ops = device_get_driver_ops(dev, struct sai_ops, std);
+    if (!ops)
+    {
+        TRACEF ("Failed to get the ops!\n");
+        return ERR_NOT_CONFIGURED;
+    }
+
+    TRACEF ("we got the ops!\n");
+
+    TRACEF ("Stopping rx..\n");
+    ret = ops->rx_stop (dev);
+    if (ret)
+    {
+        TRACEF ("rx_stop failed!\n");
+        return ret;
+    }
+
+    TRACEF ("Stopping tx..\n");
+    ret = ops->tx_stop (dev);
+    if (ret)
+    {
+        TRACEF ("tx_stop failed!\n");
+        return ret;
+    }
+
+    if (state->tx_circ_buf.buf)
+    {
+        TRACEF ("Closing tx..\n");
+        ret = ops->tx_close (dev);
+        if (ret)
+        {
+            TRACEF ("tx_close failed!\n");
+            return ret;
+        }
+    }
+
+    if (state->rx_circ_buf.buf)
+    {
+        TRACEF ("Closing rx..\n");
+        ret = ops->rx_close (dev);
+        if (ret)
+        {
+            TRACEF ("rx_close failed!\n");
+            return ret;
+        }
+    }
+
+    TRACEF ("Freeing sai isr..\n");
+    ret = unregister_int_handler (irq->irq, imx_sai_isr);
+    if (ret == NO_ERROR)
+    {
+        TRACEF ("isr handler unregistered\n");
+    }
+    else
+    {
+        TRACEF ("Failed to unregister isr handler with: %d!\n", ret);   
+    }
+
+    return ret;
+}
+
 static void imx_sai_tx_adjust_buffers(struct imx_sai_state *state, size_t length)
 {
     sai_handle_t *tx_handle = &state->sai_tx_handle;
@@ -4169,7 +4252,8 @@ static struct sai_ops the_ops = {
     .rx_set_callback = imx_sai_rx_set_callback,
     .read = imx_sai_read,
     .read_nonblock = imx_sai_read_nonblock,
-    .rx_get_data_available = imx_sai_rx_data_available
+    .rx_get_data_available = imx_sai_rx_data_available,
+    .shutdown = imx_sai_shutdown
 };
 
 DRIVER_EXPORT_WITH_LVL(sai, &the_ops.std, DRIVER_INIT_PLATFORM);
