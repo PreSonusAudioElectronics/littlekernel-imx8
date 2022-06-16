@@ -1795,9 +1795,9 @@ static status_t imx_sai_shutdown(struct device *dev)
         return ERR_NOT_CONFIGURED;
     }
 
-    TRACEF ("we got the ops!\n");
+    LTRACEF ("we got the ops!\n");
 
-    TRACEF ("Stopping rx..\n");
+    LTRACEF ("Stopping rx..\n");
     ret = ops->rx_stop (dev);
     if (ret)
     {
@@ -1805,7 +1805,7 @@ static status_t imx_sai_shutdown(struct device *dev)
         return ret;
     }
 
-    TRACEF ("Stopping tx..\n");
+    LTRACEF ("Stopping tx..\n");
     ret = ops->tx_stop (dev);
     if (ret)
     {
@@ -1815,7 +1815,7 @@ static status_t imx_sai_shutdown(struct device *dev)
 
     if (state->tx_circ_buf.buf)
     {
-        TRACEF ("Closing tx..\n");
+        LTRACEF ("Closing tx..\n");
         ret = ops->tx_close (dev);
         if (ret)
         {
@@ -1826,7 +1826,7 @@ static status_t imx_sai_shutdown(struct device *dev)
 
     if (state->rx_circ_buf.buf)
     {
-        TRACEF ("Closing rx..\n");
+        LTRACEF ("Closing rx..\n");
         ret = ops->rx_close (dev);
         if (ret)
         {
@@ -1835,11 +1835,11 @@ static status_t imx_sai_shutdown(struct device *dev)
         }
     }
 
-    TRACEF ("Freeing sai isr..\n");
+    LTRACEF ("Freeing sai isr..\n");
     ret = unregister_int_handler (irq->irq, imx_sai_isr);
     if (ret == NO_ERROR)
     {
-        TRACEF ("isr handler unregistered\n");
+        LTRACEF ("isr handler unregistered\n");
     }
     else
     {
@@ -2889,12 +2889,28 @@ static status_t imx_sai_tx_setup(struct device *dev, sai_format_t *pfmt)
     tx_format->masterClockHz = state->mclk_tx_rate;
 
     /* FIXME: Translate kstatus to LK status */
+    LTRACEF ("Will call SAI_TransferTxSetFormat() with these params:\n");
+    LTRACEF (" tx_format->masterClockHz = %u\n", tx_format->masterClockHz);
+    LTRACEF (" tx_format->bitWidth = %u\n", tx_format->bitWidth);
+    LTRACEF (" tx_format->sampleRate_Hz = %u\n", tx_format->sampleRate_Hz);
+    LTRACEF (" tx_format->slot = %u\n", tx_format->slot);
+    LTRACEF (" tx_format->channel = %u\n", tx_format->channel);
+    LTRACEF (" tx_format->channelMask = 0x%x\n", tx_format->channelMask);
+    LTRACEF (" tx_format->endChannel = %u\n", tx_format->endChannel);
+    LTRACEF (" mclksourceHz = %u, bclksourceHz = %u\n", state->mclk_tx_rate,
+        tx_format->masterClockHz);
     ret = SAI_TransferTxSetFormat(
               base,
               tx_handle,
               tx_format,
               state->mclk_tx_rate,
               tx_format->masterClockHz);
+    LTRACEF ("After SAI_TransferTxSetFormat(), registers are:\n");
+    LTRACEF (" TCR2 = 0x%x\n", base->TCR2);
+    LTRACEF (" TCR3 = 0x%x\n", base->TCR3);
+    LTRACEF (" TCR4 = 0x%x\n", base->TCR4);
+    LTRACEF (" TCR5 = 0x%x\n", base->TCR5);
+
     LTRACEF("sai%d: FIFO watermark: %d\n", state->bus_id, tx_handle->watermark);
 
     /* adjust dataline mask */
