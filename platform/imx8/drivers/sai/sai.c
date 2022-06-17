@@ -286,6 +286,16 @@ struct imx_sai_state {
 static status_t imx_sai_set_timestamp(struct device *dev,
                                         struct sai_ioc_cmd_timestamp *ts);
 
+static inline void imx_sai_dump_registers (I2S_Type *base)
+{
+    LTRACEF (" TCSR = %#08x\n", base->TCSR);
+    LTRACEF (" TCR1 = %#08x\n", base->TCR1);
+    LTRACEF (" TCR2 = %#08x\n", base->TCR2);
+    LTRACEF (" TCR3 = %#08x\n", base->TCR3);
+    LTRACEF (" TCR4 = %#08x\n", base->TCR4);
+    LTRACEF (" TCR5 = %#08x\n", base->TCR5);
+}
+
 static inline void imx_sai_reset_period(struct imx_period_s *period, unsigned frame_size)
 {
     period->xfer_done = 0;
@@ -2161,6 +2171,8 @@ static status_t imx_sai_tx_start(struct device *dev)
             thread_preempt();
     }
 
+    LTRACEF ("After imx_sai_start, registers are:\n");
+    imx_sai_dump_registers (base);
     return 0;
 }
 
@@ -2906,10 +2918,7 @@ static status_t imx_sai_tx_setup(struct device *dev, sai_format_t *pfmt)
               state->mclk_tx_rate,
               tx_format->masterClockHz);
     LTRACEF ("After SAI_TransferTxSetFormat(), registers are:\n");
-    LTRACEF (" TCR2 = 0x%x\n", base->TCR2);
-    LTRACEF (" TCR3 = 0x%x\n", base->TCR3);
-    LTRACEF (" TCR4 = 0x%x\n", base->TCR4);
-    LTRACEF (" TCR5 = 0x%x\n", base->TCR5);
+    imx_sai_dump_registers (base);
 
     LTRACEF("sai%d: FIFO watermark: %d\n", state->bus_id, tx_handle->watermark);
 
