@@ -31,6 +31,9 @@ GLOBAL_DEFINES += \
 # global defines for debugging:
 AF_LK_LOGLEVEL=7
 
+# provide operator new and delete outside LK tree
+WITH_EXT_NEW_DELETE=true
+
 #EXTRA_OBJS := libapp.a
 
 include project/virtual/test.mk
