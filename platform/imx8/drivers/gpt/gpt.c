@@ -514,7 +514,7 @@ static struct gpt_ops the_ops = {
     .get_capture = imx_gpt_get_capture,
 };
 
-DRIVER_EXPORT(gpt, &the_ops.std);
+//DRIVER_EXPORT(gpt, &the_ops.std);
 
 struct device *class_gpt_get_device_by_id(int id)
 {
