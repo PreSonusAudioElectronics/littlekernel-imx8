@@ -20,7 +20,7 @@
         compatible = "latency";
         event-names = "mixer";
         event-ids = <6000>;
-        mixer-gpio = <&gpio5 12 0>;
+        mixer-gpio = <&gpio5 27 0>;
 
         status = "ok";
     };
