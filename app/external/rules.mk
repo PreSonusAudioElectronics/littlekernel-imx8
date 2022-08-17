@@ -24,7 +24,7 @@ EXTRA_LINKER_DEPS += libapp.a \
 
 
 # Make LK use the pep print mutex once the application has started
-GLOBAL_DEFINES += LK_USE_PRINT_LOCK
+# GLOBAL_DEFINES += LK_USE_PRINT_LOCK
 
 # collect spinlock stats
 # GLOBAL_DEFINES += SPINLOCK_STATS
