@@ -1805,7 +1805,7 @@ static status_t imx_sai_shutdown(struct device *dev)
         return ERR_NOT_CONFIGURED;
     }
 
-    LTRACEF ("we got the ops!\n");
+    LTRACEF ("Shutting down driver for SAI busId %d\n", state->bus_id);
 
     LTRACEF ("Stopping rx..\n");
     ret = ops->rx_stop (dev);
