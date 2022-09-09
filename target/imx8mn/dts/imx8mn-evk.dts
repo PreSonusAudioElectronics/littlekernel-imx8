@@ -99,6 +99,13 @@
         size = <0x200>;
         status = "ok";
     };
+
+    // wm8524 {
+    //     compatible = "dac_wm8524";
+    //     bus-id = < 1 >;
+    //     mute-gpio = <&gpio5 21 0>;
+    //     status = "ok";
+    // };
 };
 
 &gpr {
