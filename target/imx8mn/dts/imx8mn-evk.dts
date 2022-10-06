@@ -93,7 +93,7 @@
     };
 
     lk_ethernet {
-        compatible = "ivshm_serial";
+        compatible = "ivshm_msg";
         id_str = "lk_ethernet";
         id = <0x403>;
         size = <0x200>;
