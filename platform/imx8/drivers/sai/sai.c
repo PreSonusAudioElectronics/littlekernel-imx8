@@ -286,6 +286,16 @@ struct imx_sai_state {
 static status_t imx_sai_set_timestamp(struct device *dev,
                                         struct sai_ioc_cmd_timestamp *ts);
 
+static inline void imx_sai_dump_registers (I2S_Type *base)
+{
+    LTRACEF (" TCSR = %#08x\n", base->TCSR);
+    LTRACEF (" TCR1 = %#08x\n", base->TCR1);
+    LTRACEF (" TCR2 = %#08x\n", base->TCR2);
+    LTRACEF (" TCR3 = %#08x\n", base->TCR3);
+    LTRACEF (" TCR4 = %#08x\n", base->TCR4);
+    LTRACEF (" TCR5 = %#08x\n", base->TCR5);
+}
+
 static inline void imx_sai_reset_period(struct imx_period_s *period, unsigned frame_size)
 {
     period->xfer_done = 0;
@@ -652,7 +662,7 @@ static bool imx_sai_push_to_rx_circ_buffer(struct imx_sai_state *state,
     }
 
     // if (state->rx_cb && (used >= state->rx_period.size) ) 
-    if (state->rx_cb && (used >= 0) ) 
+    if (state->rx_cb && (used > 0) ) 
     {
         smp_mb();
         state->rx_cb(SAI_EVENT_DATA_RDY, &handle->xfer_remaining, &used);
@@ -1000,6 +1010,10 @@ static unsigned imx_sai_set_mclk(struct imx_sai_state *state, unsigned rate,
                 __PRETTY_FUNCTION__, __LINE__, *pll_k_value);
     }
 
+    // state->device->name
+    TRACEF ("Setting mck for busId: %u, mclk config name: %s, mclk rate: %u\n",
+        state->bus_id, mclk_configs_names[mclk_cfg], *mclk_rate_ptr);
+
     if ((is_dummy == false) && (state->clock_dev && mclk_configs_names[mclk_cfg]))
         ret = clock_audio_set_sai_mclk_config(state->clock_dev, state->bus_id,
                                               mclk_configs_names[mclk_cfg],
@@ -1009,6 +1023,9 @@ static unsigned imx_sai_set_mclk(struct imx_sai_state *state, unsigned rate,
     if (clk && ret) {
         printlk(LK_NOTICE, "%s:%d: SAI%d: Using direct access to root clock mux as fallback\n",
                 __PRETTY_FUNCTION__, __LINE__, state->bus_id);
+        printlk(LK_NOTICE, "state->clock_dev is now: %p\n", state->clock_dev);
+        printf ("Dumping fallback clock configuration:\n");
+        print_dev_cfg_clk (clk);
         devcfg_set_clock(clk);
         *mclk_rate_ptr = clk->rate;
     }
@@ -1019,7 +1036,7 @@ static unsigned imx_sai_set_mclk(struct imx_sai_state *state, unsigned rate,
     mclk *= 1000;
     *mclk_rate_ptr = (unsigned) mclk;
 
-    printlk(LK_INFO, "SAI%d: Mode %d: Switching to %s mclk rate %d - harmonic of %d\n",
+    printlk(LK_NOTICE, "SAI%d: Mode %d: Switching to %s mclk rate %d - harmonic of %d\n",
            state->bus_id, state->mclk_as_output, is_tx ? "tx" : "rx",
            *mclk_rate_ptr, rate);
 
@@ -1397,7 +1414,10 @@ static status_t imx_sai_init(struct device *dev)
     state->is_dummy_rx = state->is_dummy_tx = false;
 
     /* Clock device */
+    printlk(LK_NOTICE, "acquired clock device handle at %p\n", dev);
     state->clock_dev = of_device_lookup_device(dev, "clock_audio");
+    printlk(LK_NOTICE, "state->clock_dev is now: %p\n", state->clock_dev);
+    printlk(LK_NOTICE, "state @%p holds clock_dev\n", state);
 
     /* Look for chained SAI devices */
     state->rx_sai_chained_dev = of_device_lookup_device(dev, "rx,sai_chained");
@@ -1423,6 +1443,8 @@ static status_t imx_sai_init(struct device *dev)
     ASSERT(NULL != state->clk_tx[SAI_MCLK_CONFIG_48K]);
     ASSERT(NULL != state->clk_tx[SAI_MCLK_CONFIG_44K]);
     ASSERT(NULL != state->clk_tx[SAI_MCLK_CONFIG_32K]);
+
+    print_dev_cfg_clk (state->clk_tx[SAI_MCLK_CONFIG_48K]);
 
     /* Get rx mclk configs */
     ret = of_device_get_strings(dev, "mclk-rx-config-names", state->mclk_rx_config, SAI_MCLK_CONFIG);
@@ -1754,6 +1776,89 @@ static status_t imx_sai_init(struct device *dev)
     return ret;
 }
 
+static status_t imx_sai_shutdown(struct device *dev)
+{
+    /*!
+     * \brief Stop activity of this driver so another driver can take over
+     * - close tx and rx
+     * - shutdown any threads
+     * - stop dma
+     * - unregister interrupt handlers
+     * 
+     */
+
+    status_t ret = 0;
+    
+    struct imx_sai_state *state = dev->state;
+    ASSERT(state);
+
+    const struct device_config_data *config = dev->config;
+
+    struct device_cfg_irq *irq =
+                    device_config_get_irq_by_name(config, "core");
+    ASSERT (irq);
+    
+    struct sai_ops *ops = device_get_driver_ops(dev, struct sai_ops, std);
+    if (!ops)
+    {
+        TRACEF ("Failed to get the ops!\n");
+        return ERR_NOT_CONFIGURED;
+    }
+
+    LTRACEF ("Shutting down driver for SAI busId %d\n", state->bus_id);
+
+    LTRACEF ("Stopping rx..\n");
+    ret = ops->rx_stop (dev);
+    if (ret)
+    {
+        TRACEF ("rx_stop failed!\n");
+        return ret;
+    }
+
+    LTRACEF ("Stopping tx..\n");
+    ret = ops->tx_stop (dev);
+    if (ret)
+    {
+        TRACEF ("tx_stop failed!\n");
+        return ret;
+    }
+
+    if (state->tx_circ_buf.buf)
+    {
+        LTRACEF ("Closing tx..\n");
+        ret = ops->tx_close (dev);
+        if (ret)
+        {
+            TRACEF ("tx_close failed!\n");
+            return ret;
+        }
+    }
+
+    if (state->rx_circ_buf.buf)
+    {
+        LTRACEF ("Closing rx..\n");
+        ret = ops->rx_close (dev);
+        if (ret)
+        {
+            TRACEF ("rx_close failed!\n");
+            return ret;
+        }
+    }
+
+    LTRACEF ("Freeing sai isr..\n");
+    ret = unregister_int_handler (irq->irq, imx_sai_isr);
+    if (ret == NO_ERROR)
+    {
+        LTRACEF ("isr handler unregistered\n");
+    }
+    else
+    {
+        TRACEF ("Failed to unregister isr handler with: %d!\n", ret);   
+    }
+
+    return ret;
+}
+
 static void imx_sai_tx_adjust_buffers(struct imx_sai_state *state, size_t length)
 {
     sai_handle_t *tx_handle = &state->sai_tx_handle;
@@ -2066,6 +2171,8 @@ static status_t imx_sai_tx_start(struct device *dev)
             thread_preempt();
     }
 
+    LTRACEF ("After imx_sai_start, registers are:\n");
+    imx_sai_dump_registers (base);
     return 0;
 }
 
@@ -2794,12 +2901,25 @@ static status_t imx_sai_tx_setup(struct device *dev, sai_format_t *pfmt)
     tx_format->masterClockHz = state->mclk_tx_rate;
 
     /* FIXME: Translate kstatus to LK status */
+    LTRACEF ("Will call SAI_TransferTxSetFormat() with these params:\n");
+    LTRACEF (" tx_format->masterClockHz = %u\n", tx_format->masterClockHz);
+    LTRACEF (" tx_format->bitWidth = %u\n", tx_format->bitWidth);
+    LTRACEF (" tx_format->sampleRate_Hz = %u\n", tx_format->sampleRate_Hz);
+    LTRACEF (" tx_format->slot = %u\n", tx_format->slot);
+    LTRACEF (" tx_format->channel = %u\n", tx_format->channel);
+    LTRACEF (" tx_format->channelMask = 0x%x\n", tx_format->channelMask);
+    LTRACEF (" tx_format->endChannel = %u\n", tx_format->endChannel);
+    LTRACEF (" mclksourceHz = %u, bclksourceHz = %u\n", state->mclk_tx_rate,
+        tx_format->masterClockHz);
     ret = SAI_TransferTxSetFormat(
               base,
               tx_handle,
               tx_format,
               state->mclk_tx_rate,
               tx_format->masterClockHz);
+    LTRACEF ("After SAI_TransferTxSetFormat(), registers are:\n");
+    imx_sai_dump_registers (base);
+
     LTRACEF("sai%d: FIFO watermark: %d\n", state->bus_id, tx_handle->watermark);
 
     /* adjust dataline mask */
@@ -4157,7 +4277,8 @@ static struct sai_ops the_ops = {
     .rx_set_callback = imx_sai_rx_set_callback,
     .read = imx_sai_read,
     .read_nonblock = imx_sai_read_nonblock,
-    .rx_get_data_available = imx_sai_rx_data_available
+    .rx_get_data_available = imx_sai_rx_data_available,
+    .shutdown = imx_sai_shutdown
 };
 
 DRIVER_EXPORT_WITH_LVL(sai, &the_ops.std, DRIVER_INIT_PLATFORM);

@@ -104,6 +104,10 @@
  * @{
  */
 
+#if 0
+// Include the machine header instead of this to
+// avoid conflicting declarations
+
 /** I2S - Register Layout Typedef */
 typedef struct {
     __I  uint32_t VERID;                             /**< VERID, offset: 0x0 */
@@ -139,6 +143,8 @@ typedef struct {
     __I  uint32_t RBCTR;                             /**< RBCTR, offset: 0xFC */
     __IO uint32_t MCR;                               /**< MCR, offset: 0x100 */
 } I2S_Type;
+#endif
+#include <fsl_device_registers.h>
 
 /* ----------------------------------------------------------------------------
    -- I2S Register Masks

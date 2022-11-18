@@ -20,7 +20,7 @@
         compatible = "latency";
         event-names = "mixer";
         event-ids = <6000>;
-        mixer-gpio = <&gpio5 12 0>;
+        mixer-gpio = <&gpio5 27 0>;
 
         status = "ok";
     };
@@ -100,12 +100,12 @@
         status = "ok";
     };
 
-    wm8524 {
-        compatible = "dac_wm8524";
-        bus-id = < 1 >;
-        mute-gpio = <&gpio5 21 0>;
-        status = "ok";
-    };
+    // wm8524 {
+    //     compatible = "dac_wm8524";
+    //     bus-id = < 1 >;
+    //     mute-gpio = <&gpio5 21 0>;
+    //     status = "ok";
+    // };
 };
 
 &gpr {
@@ -181,6 +181,7 @@
     status = "ok";
 
     disable-dma-rx;
+    disable-dma-tx;
     pinctrl-names = "default";
     pinctrl-0 = <
         IOMUXC_SAI3_MCLK_SAI3_MCLK      0   0x8A
@@ -200,7 +201,7 @@
     tx,mclk-select = < 1 >;
     rx,mclk-select = < 1 >;
     /* mclk set as an output */
-    mclk,is-output = < 1 >;
+    mclk,is-output = < 0 >;
 
     /* set tx dma to zero-copy un-cached mode */
     tx,dma-mode = < 1 >;

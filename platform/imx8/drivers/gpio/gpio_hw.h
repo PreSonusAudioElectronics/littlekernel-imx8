@@ -37,6 +37,7 @@
 #include "sys/types.h"
 #include "compiler.h"
 #include <assert.h>
+#include <fsl_device_registers.h>
 
 /*!
  * @addtogroup gpio_driver
@@ -53,17 +54,6 @@
  * @{
  */
 
-/** GPIO - Register Layout Typedef */
-typedef struct {
-  __IO uint32_t DR;                                /**< GPIO data register, offset: 0x0 */
-  __IO uint32_t GDIR;                              /**< GPIO direction register, offset: 0x4 */
-  __I  uint32_t PSR;                               /**< GPIO pad status register, offset: 0x8 */
-  __IO uint32_t ICR1;                              /**< GPIO interrupt configuration register1, offset: 0xC */
-  __IO uint32_t ICR2;                              /**< GPIO interrupt configuration register2, offset: 0x10 */
-  __IO uint32_t IMR;                               /**< GPIO interrupt mask register, offset: 0x14 */
-  __IO uint32_t ISR;                               /**< GPIO interrupt status register, offset: 0x18 */
-  __IO uint32_t EDGE_SEL;                          /**< GPIO edge select register, offset: 0x1C */
-} GPIO_Type;
 
 /* ----------------------------------------------------------------------------
    -- GPIO Register Masks
