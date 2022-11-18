@@ -104,6 +104,7 @@ void platform_init(void)
 
 }
 
+static unsigned enabled_cpus = 1;
 
 extern void arm_reset(void);
 static void platform_boot_secondary_cpus(void)
@@ -117,9 +118,18 @@ static void platform_boot_secondary_cpus(void)
 
     while (cpuid < arch_max_num_cpus()) {
         int32_t ret = psci_cpu_on(cluster, cpuid, sec_entry);
+        if (ret == 0)
+        {
+            enabled_cpus++;
+        }
         printf("Enabling cpu %lld returned %x\n", cpuid, ret);
         cpuid++;
     }
+}
+
+unsigned platform_num_enabled_cpus(void)
+{
+    return enabled_cpus;
 }
 
 void platform_early_init(void)
